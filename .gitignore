@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Created by .ignore support plugin (hsz.mobi)
 ### Example user template template
 ### Example user template
@@ -10,17 +9,11 @@
 out
 gen
 ### Python template
-=======
->>>>>>> 07e76354b90ab2f7097d5b155349a146ef60bf04
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
-<<<<<<< HEAD
 CamEngine/__pycache__/*
-=======
-
->>>>>>> 07e76354b90ab2f7097d5b155349a146ef60bf04
 # C extensions
 *.so
 
@@ -65,10 +58,6 @@ htmlcov/
 nosetests.xml
 coverage.xml
 *.cover
-<<<<<<< HEAD
-=======
-*.py,cover
->>>>>>> 07e76354b90ab2f7097d5b155349a146ef60bf04
 .hypothesis/
 .pytest_cache/
 
@@ -112,17 +101,8 @@ ipython_config.py
 #   install all needed dependencies.
 #Pipfile.lock
 
-<<<<<<< HEAD
 # celery beat schedule file
 celerybeat-schedule
-=======
-# PEP 582; used by e.g. github.com/David-OConnor/pyflow
-__pypackages__/
-
-# Celery stuff
-celerybeat-schedule
-celerybeat.pid
->>>>>>> 07e76354b90ab2f7097d5b155349a146ef60bf04
 
 # SageMath parsed files
 *.sage.py
@@ -153,10 +133,7 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
-<<<<<<< HEAD
 
 CamEngine/logs/
 Server/convert_xml.py
 
-=======
->>>>>>> 07e76354b90ab2f7097d5b155349a146ef60bf04
