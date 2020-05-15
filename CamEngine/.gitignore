@@ -1,0 +1,14 @@
+__pycache__/
+*.jpg
+*.png
+*.mp4
+.eggs/
+.idea/*
+.idea/
+*.manifest
+*.spec
+*.log
+CamEngine/*.jpg
+CamEngine/*.mp4
+CamEngine/*.png
+CamEngine/test*

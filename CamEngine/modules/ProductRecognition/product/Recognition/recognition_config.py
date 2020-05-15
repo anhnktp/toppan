@@ -1,0 +1,4 @@
+MODEL_FILE = "model.pth.tar-40"
+TEST_IMAGE_WIDTH = 196
+TEST_IMAGE_HEIGH = 196
+CNN_ARCH = "shufflenetv2"
