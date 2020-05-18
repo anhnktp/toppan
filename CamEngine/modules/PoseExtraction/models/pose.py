@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-from ..keypoints import BODY_PARTS_KPT_IDS, BODY_PARTS_PAF_IDS
+from ..utils.keypoints import BODY_PARTS_KPT_IDS, BODY_PARTS_PAF_IDS
 
 class Pose(object):
     num_kpts = 18

@@ -6,7 +6,7 @@ import numpy as np
 import torch
 from .keypoints.keypoint import extract_keypoints as extract_keypoints1
 
-from .keypoints import extract_keypoints, group_keypoints
+from .utils.keypoints import extract_keypoints, group_keypoints
 from .utils.load_state import load_state
 from .PoseBase import PoseBase
 from .models.pose import Pose
