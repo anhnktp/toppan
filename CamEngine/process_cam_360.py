@@ -7,15 +7,15 @@ import numpy as np
 from collections import deque
 from shapely.geometry.polygon import Polygon
 from modules.DataTemplate import DataTemplate
-# from modules.Detector_v2 import PersonDetector
-# from modules.Detector_blitznet import Bliznet_detector as PersonDetector
-from modules.Detector_yolov3 import PersonDetector
+# from modules.Detection.Detector_ssd import PersonDetector
+# from modules.Detection.Detector_blitznet import Bliznet_detector as PersonDetector
+from modules.Detection.Detector_yolov3 import PersonDetector
 from modules.EventManager import EventManager
-from modules.Tracker import Tracker
+from modules.Tracking import Tracker
 from modules.VMSManager import VMSManager
 from helpers.settings import *
 from helpers.concat_local_id import concat_local_id_time, convert_to_jp_time
-from helpers.tracking.check_overwrap import check_overwrap
+from modules.Tracking.utils.check_overwrap import check_overwrap
 import pandas as pd
 
 def process_cam_360(cam360_queue, num_loaded_model, global_tracks):
@@ -66,7 +66,7 @@ def process_cam_360(cam360_queue, num_loaded_model, global_tracks):
 
     # Create instance of PersonDetector
     detector = PersonDetector(os.getenv('CAM_360_GPU'), os.getenv('CFG_PATH'), ckpt_path=os.getenv('YOLO_MODEL_PATH'),
-                              cls_names=os.getenv('CLS_PATH'), augment=True)
+                              cls_names=os.getenv('CLS_PATH'), augment=False)
     detector.setROI(roi_x1y1, roi_x2y2)
 
     # Create instance of Tracker

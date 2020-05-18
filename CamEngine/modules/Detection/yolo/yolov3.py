@@ -1,7 +1,7 @@
 # coding=utf-8
 from __future__ import division, print_function
 import tensorflow as tf
-from helpers.detection.layer_utils import conv2d, darknet53_body, yolo_block, upsample_layer
+from .utils.layer_utils import conv2d, darknet53_body, yolo_block, upsample_layer
 
 slim = tf.contrib.slim
 

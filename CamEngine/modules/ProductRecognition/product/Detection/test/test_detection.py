@@ -1,6 +1,7 @@
 import unittest
-from CamEngine.Detection.yolo_detect import Detection
+from ..yolo_detect import Detection
 import cv2
+
 class TestDetection(unittest.TestCase):
     def test_bounding_box(self):
         self.assertEqual(0, 0)

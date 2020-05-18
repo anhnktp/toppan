@@ -1,7 +1,7 @@
 # coding: utf-8
 from __future__ import division, print_function
 import sys
-from helpers.detection.data_aug import *
+from .data_aug import *
 
 PY_VERSION = sys.version_info[0]
 iter_cnt = 0

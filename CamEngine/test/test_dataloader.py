@@ -1,6 +1,6 @@
 import unittest
 import os
-from configs.cam_data import get_engine_cams, get_evidence_cams
+from helpers.cam_data import get_engine_cams, get_evidence_cams
 from modules.DataLoader import DataLoader
 from multiprocessing import Queue
 import time

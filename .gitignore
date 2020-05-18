@@ -137,3 +137,18 @@ dmypy.json
 CamEngine/logs/
 Server/convert_xml.py
 
+helpers/cam_data.py
+modules/Detection/yolo/utils/data_aug.py
+modules/Detection/yolo/utils/data_utils.py
+modules/Detection/yolo/utils/eval_utils.py
+modules/Detection/yolo/utils/layer_utils.py
+modules/Detection/yolo/utils/misc_utils.py
+modules/Detection/yolo/utils/nms_utils.py
+modules/Detection/yolo/utils/plot_utils.py
+modules/Detection/yolo/yolov3.py
+modules/Detection/yolov3/models.py
+modules/Detection/yolov3/utils/
+modules/SyncManager/RedisQueue.py
+modules/SyncManager/SyncManager.py
+modules/SyncManager/__init__.py
+modules/Tracking/TrackerBase.py

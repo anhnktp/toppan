@@ -1,6 +1,7 @@
 import argparse
-from modules.product.Recognition.recognition_config import *
+from .recognition_config import *
 import os
+
 def argument_parser():
     root_path = os.path.join(os.path.dirname(__file__), 'data')
 

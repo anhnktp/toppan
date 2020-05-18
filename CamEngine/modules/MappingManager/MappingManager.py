@@ -6,7 +6,7 @@ import os
 
 import numpy as np
 
-from helpers.action_recognition.check_in_area import inPolygon
+from ..ActionRecognition.utils.check_in_area import inPolygon
 
 
 class MappingManager():

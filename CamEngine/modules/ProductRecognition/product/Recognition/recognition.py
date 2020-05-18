@@ -14,7 +14,7 @@ from .torchreid import models
 from .torchreid.utils.iotools import check_isfile
 from .torchreid.utils.torchtools import load_pretrained_weights
 from .recognition_config import *
-from modules.product.Common.utils import cv2_PIL, crop
+from ..Common.utils import cv2_PIL, crop
 import pickle
 
 parser = argument_parser()

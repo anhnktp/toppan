@@ -2,7 +2,7 @@ from .Base import DetectionBase
 import logging
 from .config.yolo_config import *
 from .models.yolo2 import YOLO
-from modules.product.Common.utils import cv2_PIL
+from ..Common.utils import cv2_PIL
 import os
 
 logging.basicConfig(format='[%(levelname)s|%(asctime)s] %(message)s',

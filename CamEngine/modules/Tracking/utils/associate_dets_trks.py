@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.optimize import linear_sum_assignment
-from helpers.tracking.bbox_utils import iou
+from helpers.bbox_utils import iou
 
 def associate_detections_to_trackers(detections, trackers, low_iou_threshold=0.3):
     """

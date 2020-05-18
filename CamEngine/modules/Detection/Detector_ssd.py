@@ -2,8 +2,8 @@ import numpy as np
 import tensorflow as tf
 from abc import abstractmethod
 from helpers.settings import *
-from helpers.tracking.bbox_utils import min_box_iou
-from modules.Base.DetectorBase import DetectorBase
+from helpers.bbox_utils import min_box_iou
+from .DetectorBase import DetectorBase
 
 
 class Detector(DetectorBase):

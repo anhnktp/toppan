@@ -1,11 +1,11 @@
-from modules.blitznet.config import config as net_config
-from modules.blitznet.detector import Detector
-from modules.blitznet.resnet import ResNet
+from .blitznet.config import config as net_config
+from .blitznet.detector import Detector
+from .blitznet.resnet import ResNet
 import tensorflow as tf
 from PIL import Image
-from modules.blitznet.env import *
-from modules.blitznet.sort import *
-from modules.Base.DetectorBase import DetectorBase
+from .blitznet.env import *
+from .blitznet.sort import *
+from .DetectorBase import DetectorBase
 import cv2
 
 VOC_CATS = ['__background__','person','non-person']

@@ -4,7 +4,7 @@ import torch
 from torch import nn
 import numpy as np
 
-from helpers.pose_extraction.conv import conv, conv_dw, conv_dw_no_bn
+from ..utils.conv import conv, conv_dw, conv_dw_no_bn
 
 class Selection(nn.Module):
     def __init__(self, num_channels):

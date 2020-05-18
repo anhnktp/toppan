@@ -1,4 +1,4 @@
-from settings import *
+from .settings import *
 from pymongo import MongoClient
 
 def drop_all_db():

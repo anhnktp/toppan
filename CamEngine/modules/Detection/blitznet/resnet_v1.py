@@ -56,8 +56,8 @@ from __future__ import division
 from __future__ import print_function
 
 import tensorflow as tf
-from modules.blitznet.env import *
-import modules.blitznet.resnet_utils as resnet_utils
+from .env import *
+import resnet_utils
 # from config import args
 
 resnet_arg_scope = resnet_utils.resnet_arg_scope

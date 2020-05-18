@@ -1,9 +1,9 @@
 import numpy as np
 from shapely.geometry import Point
-from modules.Base.TrackerBase import TrackerBase
+from .TrackerBase import TrackerBase
 from helpers.concat_local_id import concat_local_id_time
-from helpers.tracking.KalmanBox import KalmanBoxTracker
-from helpers.tracking.associate_dets_trks import associate_detections_to_trackers
+from .utils.KalmanBox import KalmanBoxTracker
+from .utils.associate_dets_trks import associate_detections_to_trackers
 
 def find_area(bbox, in_door_box, out_door_box, a_box, b_box):
     center_point = Point((bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2)

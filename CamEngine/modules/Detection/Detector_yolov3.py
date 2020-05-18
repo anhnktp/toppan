@@ -1,7 +1,7 @@
-from modules.Base.DetectorBase import DetectorBase
-from modules.Model.models import *  # set ONNX_EXPORT in models.py
-from modules.utils.datasets import *
-from modules.utils.utils import *
+from .DetectorBase import DetectorBase
+from .yolov3.models import *  # set ONNX_EXPORT in models.py
+from .yolov3.utils.datasets import *
+from .yolov3.utils.utils import *
 from helpers.settings import *
 
 

@@ -1,7 +1,7 @@
 # import some common detectron2 utilities
 from detectron2.engine import DefaultPredictor
 from detectron2.config import get_cfg
-from modules.Base.DetectorBase import DetectorBase
+from .DetectorBase import DetectorBase
 import numpy as np
 
 

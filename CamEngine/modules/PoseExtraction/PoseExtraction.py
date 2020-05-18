@@ -4,14 +4,14 @@ import os
 import cv2
 import numpy as np
 import torch
-from modules.keypoints.keypoint import extract_keypoints as extract_keypoints1
+from .keypoints.keypoint import extract_keypoints as extract_keypoints1
 
-from helpers.pose_extraction.keypoints import extract_keypoints, group_keypoints
-from helpers.pose_extraction.load_state import load_state
-from modules.Base.PoseBase import PoseBase
-from modules.Model.pose import Pose
-from modules.Model.with_mobilenet import PoseEstimationWithMobileNet
-from helpers.action_recognition.check_in_area import inPolygon
+from .keypoints import extract_keypoints, group_keypoints
+from .utils.load_state import load_state
+from .PoseBase import PoseBase
+from .models.pose import Pose
+from .models.with_mobilenet import PoseEstimationWithMobileNet
+from ..ActionRecognition.utils.check_in_area import inPolygon
 
 
 class PoseExtraction(PoseBase):

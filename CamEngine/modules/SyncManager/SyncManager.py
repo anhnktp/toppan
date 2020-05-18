@@ -3,7 +3,7 @@ Created by sonnt at 1/2/20
 """
 import pickle
 import os
-from modules.RedisQueue import RedisQueue
+from .RedisQueue import RedisQueue
 
 class SyncManager():
 

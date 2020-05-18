@@ -2,8 +2,8 @@
 from __future__ import division, print_function
 import numpy as np
 from collections import Counter
-from helpers.detection.nms_utils import cpu_nms
-from helpers.detection.data_utils import parse_line
+from .nms_utils import cpu_nms
+from .data_utils import parse_line
 
 def calc_iou(pred_boxes, true_boxes):
     '''

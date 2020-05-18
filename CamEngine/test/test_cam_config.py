@@ -1,5 +1,5 @@
 import unittest
-from configs.cam_data import get_evidence_cams, get_engine_cams
+from helpers.cam_data import get_evidence_cams, get_engine_cams
 
 
 class TestCam(unittest.TestCase):

@@ -1,7 +1,8 @@
 import torch
 from torch import nn
-from modules.Model.utils import load_state_dict_from_url
-from modules.Model.with_mobilenet import Cpm, InitialStage, RefinementStage
+from .utils import load_state_dict_from_url
+from .with_mobilenet import Cpm, InitialStage, RefinementStage
+
 model_urls = {
     'mobilenet_v2': 'https://download.pytorch.org/models/mobilenet_v2-b0353104.pth',
 }

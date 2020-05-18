@@ -1,7 +1,7 @@
 import requests
 from threading import Timer
 from helpers.settings import *
-from modules.ResultManager import ResultManager
+from modules.ResultManager.ResultManager import ResultManager
 
 class EventManager():
     def __init__(self):

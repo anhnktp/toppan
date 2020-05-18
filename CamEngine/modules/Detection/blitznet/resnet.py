@@ -3,15 +3,15 @@ import os
 
 import tensorflow as tf
 
-import modules.blitznet.resnet_v1 as resnet_v1
-import modules.blitznet.resnet_utils as resnet_utils
+import resnet_v1
+import resnet_utils
 
-from modules.blitznet.resnet_v1 import bottleneck, bottleneck_skip
-from modules.blitznet.utils import print_variables
-import modules.blitznet.config as config
-from modules.blitznet.config import MEAN_COLOR
-from modules.blitznet.paths import INIT_WEIGHTS_DIR
-from modules.blitznet.env import *
+from .resnet_v1 import bottleneck, bottleneck_skip
+from .utils import print_variables
+import config
+from .config import MEAN_COLOR
+from .paths import INIT_WEIGHTS_DIR
+from .env import *
 
 
 log = logging.getLogger()

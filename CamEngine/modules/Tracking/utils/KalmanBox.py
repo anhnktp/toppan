@@ -1,6 +1,6 @@
 import redis
 from filterpy.kalman import KalmanFilter
-from helpers.tracking.bbox_utils import *
+from helpers.bbox_utils import *
 from helpers.settings import *
 
 

@@ -2,12 +2,12 @@ import cv2
 import numpy as np
 import tensorflow as tf
 
-from helpers.detection.data_aug import letterbox_resize
-from helpers.detection.misc_utils import parse_anchors, read_class_names
-from helpers.detection.nms_utils import gpu_nms
+from .yolo.utils.data_aug import letterbox_resize
+from .yolo.utils.misc_utils import parse_anchors, read_class_names
+from .yolo.utils.nms_utils import gpu_nms
 from helpers.settings import *
-from modules.Base.DetectorBase import DetectorBase
-from modules.Model.yolov3 import yolov3
+from .DetectorBase import DetectorBase
+from .yolo.yolov3 import yolov3
 
 
 class PersonDetector(DetectorBase):

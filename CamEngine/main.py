@@ -3,13 +3,12 @@ import crython
 import redis
 from pymongo import MongoClient
 from multiprocessing import Queue, Value, Process
-from configs.cam_data import get_engine_cams, get_evidence_cams
+from helpers.cam_data import get_engine_cams, get_evidence_cams
 from helpers.settings import *
 from modules.DataLoader import DataLoader
 from modules.SyncManager import SyncManager
 from process_cam_360 import process_cam_360
-# from proj3 import process_cam_360
-from process_cam_shelf import process_cam_shelf
+# from process_cam_shelf import process_cam_shelf
 from process_cam_sacker import process_cam_sacker
 
 
@@ -69,8 +68,8 @@ if __name__ == '__main__':
             p = Process(target=process_cam_360, args=(cam_data_loader.queue_frame, num_loaded_model, global_tracks))
         elif cam_data_loader._cam_type == 'CAM_SACKER':
             p = Process(target=process_cam_sacker, args=(cam_data_loader.queue_frame, num_loaded_model, global_tracks))
-        else:
-            p = Process(target=process_cam_shelf, args=(cam_data_loader.queue_frame, cam_data_loader._cam_type, num_loaded_model, global_tracks))
+        # else:
+        #     p = Process(target=process_cam_shelf, args=(cam_data_loader.queue_frame, cam_data_loader._cam_type, num_loaded_model, global_tracks))
         p.start()
         list_processes.append(p)
 

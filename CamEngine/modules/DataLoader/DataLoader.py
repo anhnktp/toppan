@@ -2,7 +2,7 @@ import time
 import cv2
 from multiprocessing import Process
 from helpers.settings import *
-from modules.Base.LoaderBase import LoaderBase
+from .LoaderBase import LoaderBase
 
 
 class DataLoader(LoaderBase, Process):

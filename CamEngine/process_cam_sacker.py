@@ -7,8 +7,8 @@ import redis
 import time
 from collections import deque
 from helpers.settings import *
-from modules.Detectron import Detectron
-from modules.Recognition import Recognition
+from modules.Detection.Detectron import Detectron
+from modules.ProductRecognition import Recognition
 from modules.EventManager import EventManager
 from modules.VMSManager import VMSManager
 from modules.DataTemplate import DataTemplate
