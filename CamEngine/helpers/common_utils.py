@@ -5,6 +5,7 @@ import os
 import os.path as osp
 import cv2
 import shutil
+import pandas as pd
 
 try:
     import accimage
@@ -100,6 +101,7 @@ def get_public_ip():
     # Get external ip for host machine
     return get('https://api.ipify.org').text
 
+
 def draw_polygon(img, box, colour=(0, 0, 255), thickness=2):
     '''
         :param img: cv2 image
@@ -108,32 +110,18 @@ def draw_polygon(img, box, colour=(0, 0, 255), thickness=2):
     cv2.polylines(img, [np.asarray(box, np.int32)], True, colour, thickness=thickness)
 
 
-def plot_bbox(img, bboxes, colours):
-    for d in bboxes:
-        if d[-1] > 0:
-            color = colours[int(d[-1]) % 16].tolist()
-            tl = round(0.001 * (img.shape[0] + img.shape[1]) / 2) + 1  # line thickness
-            c1, c2 = (int(d[0]), int(d[1])), (int(d[2]), int(d[3]))
-            cv2.rectangle(img, c1, c2, color, thickness=tl)
-            # Plot score
-            tf = max(tl - 1, 1)  # font thickness
-            if d[-1] < 1: label = 'basket'
-            else: label = '%d' % int(d[-1])     # local_id
-            t_size = cv2.getTextSize(label, 0, fontScale=tl / 4, thickness=tf)[0]
-            c2 = c1[0] + t_size[0], c1[1] - t_size[1] - 3
-            cv2.rectangle(img, c1, c2, color, -1)  # filled
-            cv2.putText(img, label, (c1[0], c1[1] - 2), 0, tl / 4, [0, 0, 0], thickness=tf,
-                        lineType=cv2.LINE_AA)
+class CSV_Writer(object):
 
-def plot_tracjectories(img, pts, colours):
-    # Plot trajectories
-    for i in range(1, len(pts)):
-        # if either of the tracked points are None, ignore them
-        if pts[i - 1] is None or pts[i] is None:
-            continue
-        for j in range(0, len(pts[i - 1])):
-            for k in range(0, len(pts[i])):
-                if (pts[i - 1][j][2] == pts[i][k][2]) and (pts[i - 1][j][2] > 0):
-                    color = colours[pts[i - 1][j][2] % 16].tolist()
-                    cv2.line(img, pts[i - 1][j][0:2], pts[i][k][0:2], color, thickness=2)
-                    continue
+    def __init__(self, column_name, csv_path):
+        super(CSV_Writer, self).__init__()
+        self.csv_data = []
+        self.column_name = column_name
+        self.csv_path = csv_path
+
+    def write(self, data):
+        self.csv_data.append(data)
+
+    def to_csv(self, sep=',', index_label='ID'):
+        # Output to csv file
+        csv_df = pd.DataFrame(self.csv_data, columns=self.column_name)
+        csv_df.to_csv(self.csv_path, index=True, index_label=index_label, sep=sep)

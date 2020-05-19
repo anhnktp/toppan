@@ -19,5 +19,5 @@ def get_timestamp_from_filename(filename):
     human_time = '{}:{}:{} {}:{}:{}'.format(YYYY, mm, dd, HH, MM, SS)
     return time.mktime(time.strptime(human_time, '%Y:%m:%d %H:%M:%S'))
 
-def convert_to_human_time(unix_timestamp):
+def convert_timestamp_to_human_time(unix_timestamp):
     return datetime.datetime.fromtimestamp(unix_timestamp).strftime('%Y:%m:%d %H:%M:%S')
