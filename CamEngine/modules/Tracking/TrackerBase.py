@@ -38,7 +38,7 @@ class TrackerBase(object, metaclass=ABCMeta):
         return self._timestamp
 
     @abstractmethod
-    def update(self, dets, in_door_box, out_door_box, a_box, b_box, none_box):
+    def update(self, dets, baskets, in_door_box, out_door_box, a_box, b_box, none_box):
         """
         @Get output of Detection models
         @return:

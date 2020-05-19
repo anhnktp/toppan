@@ -7,10 +7,9 @@ def associate_detections_to_trackers(detections, trackers, low_iou_threshold=0.3
     Assigns detections to tracked object (both represented as bounding boxes)
     Returns 3 lists of matches, unmatched_detections and unmatched_trackers
     """
-    if (len(trackers) == 0) and (len(detections) > 0):
-        return np.empty((0, 2), dtype=int), np.arange(len(detections)), np.empty((0, 5), dtype=int)
-    if (len(trackers) > 0) and (len(detections) == 0):
-        return np.empty((0, 2), dtype=int), np.empty((0, 5), dtype=int), np.arange(len(trackers))
+    if (len(trackers) == 0) or (len(detections) == 0):
+        return np.empty((0, 2), dtype=int), np.arange(len(detections)), np.arange(len(trackers))
+
     iou_matrix = np.zeros((len(detections), len(trackers)), dtype=np.float32)
 
     for d, det in enumerate(detections):

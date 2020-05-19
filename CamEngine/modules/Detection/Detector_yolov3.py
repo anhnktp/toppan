@@ -35,7 +35,7 @@ class PersonDetector(DetectorBase):
         img /= 255.0
         img = img.unsqueeze(0)
         pred = self.model(img, augment=self.augment)[0]
-        pred = non_max_suppression(pred, self.conf_thres, self.iou_thres, multi_label=False, agnostic=True)
+        pred = non_max_suppression(pred, self.conf_thres, self.iou_thres, multi_label=False, agnostic=False)
         person_dets = []
         basket_dets = []
         for i, det in enumerate(pred):
