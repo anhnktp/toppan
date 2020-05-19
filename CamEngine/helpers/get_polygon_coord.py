@@ -1,6 +1,7 @@
 """Script to draw polygons and return corressponding coordinates"""
 import cv2
 import numpy as np
+import argparse
 from collections import defaultdict
 
 
@@ -40,16 +41,15 @@ def save_coord():
 
 if __name__ == "__main__":
     # construct the argument parser and parse the arguments
-    # ap = argparse.ArgumentParser()
-    # ap.add_argument("-i", "--input", required=True, help="Path to the image/video")
-    # args = ap.parse_args()
+    ap = argparse.ArgumentParser()
+    ap.add_argument("-i", "--input", required=False, help="Path to the image/video")
+    args = ap.parse_args()
 
     refPt = []
     save_data = defaultdict(int)
     image = []
 
     # load the image, clone it, and setup the mouse callback function
-    # RTSP_CAM_360 = 'rtsp://admin:123456a@@192.168.8.127:554/Streaming/Channels/2/'
     # RTSP_CAM_360='rtsp://admin:2de087aa16bb2768578595208f2f7eda@39.110.250.100:7001/cbd3ca1e-df48-1ba9-ccc3-f6657a27cab3'
     RTSP_CAM_360='/Users/anhvu/PycharmProjects/YOLOv3_TensorFlow/CAM_360.mp4'
     RTSP_CAM_SHELF_01 = '/Users/anhvu/PycharmProjects/YOLOv3_TensorFlow/02_area1_shelf_left_2020_04_15_17_18_06.mp4'

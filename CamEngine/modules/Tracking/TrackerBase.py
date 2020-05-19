@@ -17,17 +17,7 @@ class TrackerBase(object, metaclass=ABCMeta):
         @   cam_id: the id of camera (ex: cam_01)
         @   time_stamp: the timestamp correspond frame_id, frame_data from cam_id
         """
-        self._frame_id = None
         self._timestamp = None
-
-    def setFrameID(self, frame_id):
-        """
-        @Set new frame
-        @parameters
-        @   frame_id: the id of frame image (ex: frame_001)
-        @return: void
-        """
-        self._frame_id = frame_id
 
     def setTimestamp(self, timestamp):
         """
@@ -37,15 +27,6 @@ class TrackerBase(object, metaclass=ABCMeta):
         @return: void
         """
         self._timestamp = timestamp
-
-    @property
-    def frame_id(self):
-        """
-        @Get the frame image information
-        @return: a object included:
-            frame_id: the id of current frame image
-        """
-        return self._frame_id
 
     @property
     def time_stamp(self):

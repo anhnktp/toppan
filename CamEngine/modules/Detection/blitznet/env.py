@@ -1,18 +1,10 @@
-GPU_IDS = '2'
-VID_PATH = '/mnt/ssd2/datasets/Fish_eye_dataset/PJ9/Toppan_15_04_20/05_Hata/07_center_fisheye_2020_04_15_16_48_00.mp4'
-#MODEL_PATH = '/home/anhvn/blitznet/archive/BlitzNet300_x4_VOC07_det_roi/model.ckpt-65000'
-MODEL_PATH = '/home/anhvn/checkpoints/model.ckpt-120000'
-CONF_THRESH = 0.6      # The threshold of confidence above which a bboxes is considered as a class example
 EVAL_MIN_CONF = 0.7     # Filter candidate boxes by thresholding the score.
-                        # Needed to make clean final detection results.
 TOP_K_NMS = 400         # How many top scoring bboxes per category are passed to nms
 TOP_K_AFTER_NMS = 50    # How many top scoring bboxes per category are left after nms
 TOP_K_POST_NMS = 200    # How many top scoring bboxes in total are left after nms for an image
-NMS_THRESH = 0.45
 DETECT = True            # if you want a net to perform detection
 SEGMENT = False         # if you want a network to perform segmentation
 NO_SEG_GT = False
-
 
 # TRAINING FLAGS
 bn_decay = 0.9

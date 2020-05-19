@@ -1,4 +1,4 @@
-from helpers.concat_local_id import concat_local_id_time
+from helpers.time_utils import concat_local_id_time
 
 def get_local_ids(cam_type, trackers):
     local_ids = []

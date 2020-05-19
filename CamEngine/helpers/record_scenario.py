@@ -81,7 +81,7 @@ if __name__ == '__main__':
         os.mkdir(scenario_dir)
 
     engine_cams = get_engine_cams()
-    # evidence_cams = get_evidence_cams()
+    evidence_cams = get_evidence_cams()
     list_processes = []
 
     for cam_type in engine_cams:
@@ -90,11 +90,11 @@ if __name__ == '__main__':
         p = Process(target=save_video, args=(rtsp_url, fps, cam_type, scenario_dir))
         list_processes.append(p)
 
-    # for cam_type in evidence_cams:
-    #     rtsp_url = evidence_cams[cam_type]['RTSP_URL']
-    #     fps = evidence_cams[cam_type]['FPS']
-    #     p = Process(target=save_video, args=(rtsp_url, fps, cam_type, scenario_dir))
-    #     list_processes.append(p)
+    for cam_type in evidence_cams:
+        rtsp_url = evidence_cams[cam_type]['RTSP_URL']
+        fps = evidence_cams[cam_type]['FPS']
+        p = Process(target=save_video, args=(rtsp_url, fps, cam_type, scenario_dir))
+        list_processes.append(p)
 
     print('Start recording scenario! Press Ctrl + C to stop recording ...')
 

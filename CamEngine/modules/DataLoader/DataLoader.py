@@ -37,7 +37,6 @@ class DataLoader(LoaderBase, Process):
         engine_logger.critical('------ {} data loader process started ------'.format(self._cam_type))
 
         self.connect()
-        frame_cnt = 0
         self.disconnect()
         while self.isOpened():
             try:
@@ -45,9 +44,7 @@ class DataLoader(LoaderBase, Process):
                 _, frame = self._video.read()
                 if (self.num_loaded_model.value >= self.num_model) and (frame is not None):
                     timestamp = time.time()
-                    frame = cv2.resize(frame, (512, 512))
                     self.queue_frame.put({'frame': frame, 'timestamp': timestamp})
-                    frame_cnt += 1
             except Exception as ex:
                 engine_logger.error("Something error ! : ".format(ex))
         self.disconnect()

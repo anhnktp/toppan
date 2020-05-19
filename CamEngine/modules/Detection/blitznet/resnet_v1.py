@@ -57,7 +57,7 @@ from __future__ import print_function
 
 import tensorflow as tf
 from .env import *
-import resnet_utils
+from ..blitznet import resnet_utils
 # from config import args
 
 resnet_arg_scope = resnet_utils.resnet_arg_scope

@@ -3,15 +3,16 @@ import tensorflow as tf
 from tensorflow.python.ops.metrics_impl import mean_iou
 import logging
 from .boxer import PriorBoxGrid
-# from config import args
 from .env import *
 from .utils import decode_bboxes, batch_iou
 
 slim = tf.contrib.slim
 streaming_mean_iou = tf.contrib.metrics.streaming_mean_iou
 log = logging.getLogger()
+
 class Detector(object):
-    def __init__(self, sess, net, loader, config, no_gt=False, folder=None):
+
+    def __init__(self, sess, net, loader, config, no_gt=False, CONF_THRESH=0.65, NMS_THRESH=0.6):
         self.sess = sess
         self.net = net
         self.loader = loader
@@ -19,6 +20,8 @@ class Detector(object):
         self.fm_sizes = self.config['fm_sizes']
         self.no_gt = no_gt
         self.bboxer = PriorBoxGrid(self.config)
+        self.score_threshold = CONF_THRESH
+        self.nms_threshold = NMS_THRESH
         self.build_detector()
 
 
@@ -38,15 +41,14 @@ class Detector(object):
 
     def nms(self, localization, confidence, tiling):
         good_bboxes = decode_bboxes(localization, tiling)
-
-        not_crap_mask = tf.reduce_max(confidence[:, 1:], axis=-1) >= CONF_THRESH
+        not_crap_mask = tf.reduce_max(confidence[:, 1:], axis=-1) >= self.score_threshold
         good_bboxes = tf.boolean_mask(good_bboxes, not_crap_mask)
         confidence = tf.boolean_mask(confidence, not_crap_mask)
 
         self.detection_list = []
         self.score_list = []
         for i in range(1, self.loader.num_classes):
-            class_mask = tf.greater(confidence[:, i], CONF_THRESH)
+            class_mask = tf.greater(confidence[:, i], self.score_threshold)
             class_scores = tf.boolean_mask(confidence[:, i], class_mask)
             class_bboxes = tf.boolean_mask(good_bboxes, class_mask)
 
@@ -58,7 +60,7 @@ class Detector(object):
             final_inds = tf.image.non_max_suppression(top_class_bboxes,
                                                         top_class_scores,
                                                         max_output_size=TOP_K_AFTER_NMS,
-                                                        iou_threshold=NMS_THRESH)
+                                                        iou_threshold=self.nms_threshold)
 
             final_class_bboxes = tf.gather(top_class_bboxes, final_inds)
             final_scores = tf.gather(top_class_scores, final_inds)

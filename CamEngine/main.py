@@ -43,7 +43,7 @@ if __name__ == '__main__':
     engine_cams = get_engine_cams()
     evidence_cams = get_evidence_cams()
 
-    # Init
+    # Init engine
     if not os.path.exists(os.getenv('CROPPED_IMAGE_FOLDER')):
         os.mkdir(os.getenv('CROPPED_IMAGE_FOLDER'))
         os.mkdir(os.getenv('CROPPED_IMAGE_FOLDER') + 'img')
@@ -81,6 +81,8 @@ if __name__ == '__main__':
     for process in list_processes:
         process.join()
 
+    # Join cronjob
     crython.join()
 
+    # Stop engine
     engine_logger.critical('Stopped ReID service !')

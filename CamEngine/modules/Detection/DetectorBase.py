@@ -12,15 +12,13 @@ class DetectorBase(object, metaclass=ABCMeta):
         """
         @The constructor
         @Parameters
-        @   frame_id: the id of frame image (ex: frame_001)
         @   frame_data: the source of frame image, it maybe base64encoded or vector matrix encoded
         @   cam_id: the id of camera (ex: cam_01)
         @   time_stamp: the timestamp correspond frame_id, frame_data from cam_id
         """
-        self.__frame_id = None
         self.__frame_data = None
 
-    def setFrame(self, frame_data, frame_id):
+    def setFrame(self, frame_data):
         """
         @Set new frame
         @parameters
@@ -28,7 +26,6 @@ class DetectorBase(object, metaclass=ABCMeta):
         @   frame_data: the source of frame image, it maybe base64encoded or vector matrix encoded
         @return: void
         """
-        self.__frame_id = frame_id
         self.__frame_data = frame_data
 
     def setROI(self, roi_x1y1, roi_x2y2):
@@ -59,7 +56,7 @@ class DetectorBase(object, metaclass=ABCMeta):
             frame_data: the source of frame image
             frame_id: the id of current frame image
         """
-        return {"data": self.__frame_data, "id": self.__frame_id}
+        return {"data": self.__frame_data}
 
     @abstractmethod
     def getOutput(self):

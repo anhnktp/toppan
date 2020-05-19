@@ -9,7 +9,7 @@ from helpers.settings import *
 from modules.DataTemplate import DataTemplate
 from modules.ActionRecognition import ActionRecognition
 from modules.PoseExtraction import PoseExtraction
-from helpers.concat_local_id import convert_to_jp_time
+from helpers.time_utils import convert_to_jp_time
 from modules.EventManager import EventManager
 from modules.VMSManager import VMSManager
 import pandas as pd

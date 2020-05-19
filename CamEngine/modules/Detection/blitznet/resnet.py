@@ -1,14 +1,10 @@
 import logging
 import os
-
 import tensorflow as tf
 
-import resnet_v1
-import resnet_utils
-
+from ..blitznet import resnet_v1
+from ..blitznet import resnet_utils
 from .resnet_v1 import bottleneck, bottleneck_skip
-from .utils import print_variables
-import config
 from .config import MEAN_COLOR
 from .paths import INIT_WEIGHTS_DIR
 from .env import *

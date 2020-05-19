@@ -1,7 +1,5 @@
-import redis
 from filterpy.kalman import KalmanFilter
 from helpers.bbox_utils import *
-from helpers.settings import *
 
 
 class KalmanBoxTracker(object):
@@ -9,7 +7,7 @@ class KalmanBoxTracker(object):
     This class represents the internal state of individual tracked objects observed as bbox.
     """
 
-    r = redis.Redis(os.getenv("REDIS_HOST"), int(os.getenv("REDIS_PORT")))
+    count = 0
     def __init__(self, bbox, timestamp):
         """
         Initialises a tracker using initial bounding box.
@@ -51,8 +49,8 @@ class KalmanBoxTracker(object):
         self.kf.update(convert_bbox_to_z(bbox))
         # new local_id then return True, otherwise return False
         if (self.id == -1) and (self.hit_streak > min_hits):
-            self.id = int(KalmanBoxTracker.r.get(name="count_id")) + 1
-            KalmanBoxTracker.r.set(name="count_id", value=self.id)
+            KalmanBoxTracker.count += 1
+            self.id = int(KalmanBoxTracker.count) + 1
             return True
         return False
 

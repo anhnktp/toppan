@@ -1,7 +1,7 @@
 import numpy as np
 from shapely.geometry import Point
 from .TrackerBase import TrackerBase
-from helpers.concat_local_id import concat_local_id_time
+from helpers.time_utils import concat_local_id_time
 from .utils.KalmanBox import KalmanBoxTracker
 from .utils.associate_dets_trks import associate_detections_to_trackers
 

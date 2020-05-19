@@ -12,7 +12,7 @@ from modules.ProductRecognition import Recognition
 from modules.EventManager import EventManager
 from modules.VMSManager import VMSManager
 from modules.DataTemplate import DataTemplate
-from helpers.concat_local_id import concat_local_id_time
+from helpers.time_utils import concat_local_id_time
 
 
 def process_cam_sacker(cam_queue, num_loaded_model, global_tracks):
