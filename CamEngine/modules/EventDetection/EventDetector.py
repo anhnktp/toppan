@@ -17,7 +17,7 @@ class EventDetector(object):
         self.localIDs_B = []
 
         for d in trackers:
-            if d[-1] < 0: continue
+            if d[-1] < 1: continue
             # Check bit area
             bit_area = int(d[-5])
             human_time = convert_timestamp_to_human_time(d[-4])
@@ -40,7 +40,7 @@ class EventDetector(object):
             if basket_cnt > self.basket_freq:
                 csv_writer.write((1, local_id, 1202, 'HAS BASKET', basket_time, convert_timestamp_to_human_time(basket_time)))
             else:
-                csv_writer.write((1, local_id, 1202, 'NO BASKET', basket_time, convert_timestamp_to_human_time(basket_time)))
+                csv_writer.write((1, local_id, 1202, 'NO BASKET', timestamp, convert_timestamp_to_human_time(timestamp)))
             csv_writer.write(
                 (1, local_id, 1203, 'GROUP {} PEOPLE'.format(num_ppl + 1), timestamp, convert_timestamp_to_human_time(timestamp)))
 

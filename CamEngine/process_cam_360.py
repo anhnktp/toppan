@@ -3,14 +3,14 @@ import cv2
 import ast
 import numpy as np
 from shapely.geometry.polygon import Polygon
-# from modules.Detection.Detector_yolov3 import PersonDetector
-from modules.Detection.Detector_blitznet import PersonDetector
+from modules.Detection.Detector_yolov3 import PersonDetector
+# from modules.Detection.Detector_blitznet import PersonDetector
 from modules.Tracking import Tracker
 from modules.EventDetection import EventDetector
 from modules.Visualization import Visualizer
 from helpers.settings import *
 from helpers.time_utils import get_timestamp_from_filename, convert_timestamp_to_human_time
-from helpers.common_utils import CSV_Writer
+from helpers.common_utils import CSV_Writer, draw_polygon
 
 def process_cam_360(cam360_queue, num_loaded_model, global_tracks):
 
@@ -41,9 +41,9 @@ def process_cam_360(cam360_queue, num_loaded_model, global_tracks):
     is_show = os.getenv('SHOW_GUI_360') == 'TRUE'
 
     # Create instance of PersonDetector
-    # detector = PersonDetector(os.getenv('CAM_360_GPU'), os.getenv('CFG_PATH'), ckpt_path=os.getenv('YOLOv3_MODEL_PATH'),
-    #                           cls_names=os.getenv('CLS_PATH'), augment=True)
-    detector = PersonDetector(os.getenv('CAM_360_GPU'), os.getenv('CLS_PATH'), os.getenv('BLITZNET_MODEL_PATH'))
+    detector = PersonDetector(os.getenv('CAM_360_GPU'), os.getenv('CFG_PATH'), ckpt_path=os.getenv('YOLOv3_MODEL_PATH'),
+                              cls_names=os.getenv('CLS_PATH'), augment=False)
+    # detector = PersonDetector(os.getenv('CAM_360_GPU'), os.getenv('CLS_PATH'), os.getenv('BLITZNET_MODEL_PATH'))
     detector.setROI(roi_x1y1, roi_x2y2)
 
     # Create instance of Tracker
@@ -82,18 +82,17 @@ def process_cam_360(cam360_queue, num_loaded_model, global_tracks):
         # Get Detection results
         detector.setFrame(img_ori[roi_x1y1[1]:roi_x2y2[1], roi_x1y1[0]:roi_x2y2[0]])
         dets, basket_dets = detector.getOutput()
-
         # Get Tracking result
         tracker.setTimestamp(cur_time)
         trackers, localIDs_end = tracker.update(dets, basket_dets, in_door_area, out_door_area, shelf_a_area, shelf_b_area, none_area)
-
         # Update event detection results
         event_detector.update(trackers, localIDs_end, csv_writer)
-
         # Share trackers to shelf cam process
         # global_tracks.to_redis(trackers, int(img_data['timestamp'] * 1000))
 
         # Visualization: plot bounding boxes & trajectories
+        # draw_polygon(img_ori, ast.literal_eval(os.getenv('IN_DOOR_AREA')))
+        # draw_polygon(img_ori, ast.literal_eval(os.getenv('OUT_DOOR_AREA')))
         visualizer.draw(img_ori, basket_dets, trackers, event_detector)
 
         # Display the resulting frame
@@ -128,7 +127,7 @@ def process_cam_360(cam360_queue, num_loaded_model, global_tracks):
                         convert_timestamp_to_human_time(int(trk.basket_time))))
         ppl_accompany = np.asarray(list(trk.ppl_dist.values()))
         ppl_accompany = ppl_accompany[ppl_accompany > int(os.getenv('MIN_FREQ_PPL'))]
-        csv_writer.write((1, trk.id, 1203, 'GROUP {} PEOPLE'.format(len(ppl_accompany) + 1), int(trk.timestamp), convert_timestamp_to_human_time(int(cur_time))))
+        csv_writer.write((1, trk.id, 1203, 'GROUP {} PEOPLE'.format(len(ppl_accompany) + 1), int(cur_time), convert_timestamp_to_human_time(int(cur_time))))
 
     csv_writer.to_csv(sep=',', index_label='ID', sort_column=['shopper ID', 'timestamp (unix timestamp)'])
 

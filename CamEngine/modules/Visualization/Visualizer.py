@@ -38,7 +38,7 @@ class Visualizer(object):
 
 def plot_bbox(img, bboxes, colours, show_label=True):
     for d in bboxes:
-        if d[-1] < 0: continue
+        if d[-1] < 1: continue
         color = colours[int(d[-1]) % 16].tolist()
         tl = round(0.001 * (img.shape[0] + img.shape[1]) / 2) + 1  # line thickness
         c1, c2 = (int(d[0]), int(d[1])), (int(d[2]), int(d[3]))
