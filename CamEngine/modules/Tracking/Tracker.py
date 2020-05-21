@@ -1,7 +1,6 @@
 import numpy as np
 from shapely.geometry import Point
 from .TrackerBase import TrackerBase
-from helpers.time_utils import concat_local_id_time
 from .utils.KalmanBox import KalmanBoxTracker
 from .utils.associate_dets_trks import associate_detections_to_trackers
 
@@ -25,7 +24,7 @@ class Tracker(TrackerBase):
     """
        Using SORT Tracking
     """
-    def __init__(self, max_age, min_hits, low_iou_threshold=0.25):
+    def __init__(self, max_age=20, min_hits=5, low_iou_threshold=0.25, min_dist_ppl=50, min_freq_ppl=15):
         """
         Sets key parameters for SORT
         """
@@ -34,16 +33,22 @@ class Tracker(TrackerBase):
         self._min_hits = min_hits
         self._low_iou_threshold = low_iou_threshold
         self._trackers = []
+        self._min_dist_ppl = min_dist_ppl
+        self._min_freq_ppl = min_freq_ppl
 
     def update(self, dets, baskets, in_door_box, out_door_box, a_box, b_box, none_box):
 
         """
         Params:
-          dets - a numpy array of detections in the format [[x1,y1,x2,y2,score],[x1,y1,x2,y2,score],...]
-        Requires: this method must be called once for each frame even with empty detections.
-        Returns the a similar array, where the last column is the object ID.
-
-        NOTE: The number of objects returned may differ from the number of detections provided.
+            dets - a numpy array of detections in the format [[x1,y1,x2,y2,score],[x1,y1,x2,y2,score],...]
+            Requires: this method must be called once for each frame even with empty detections.
+            NOTE: The number of objects returned may differ from the number of detections provided.
+            STRUCTURE of each return track: [xmin, ymin, xmax, ymax, bit_area, cur_time, basket_count, basket_time, local_id]
+            bit_area: 1 = ENTER, 2 = EXIT, 3 = A_AREA, 4 = B_AREA, -1 = NOT IN SPECIAL AREA
+            cur_time: current timestamp
+            basket_count: number frames track has basket
+            basket_time: if basket_count > BASKET_FREQ, basket_time is first time track has basket else first time create track
+            local_id: ID of track
         """
         # get predicted locations from existing trackers.
         trks = np.zeros((len(self._trackers), 4))
@@ -62,12 +67,6 @@ class Tracker(TrackerBase):
 
         # update matched trackers with assigned detections
         for d, t in matched:
-            self._trackers[t].update(dets[d], self._min_hits)
-            res[d, 0:4] = dets[d, 0:-1]
-            res[d, -1] = self._trackers[t].id
-            res[d, -2] = self._trackers[t].basket_time
-            res[d, -3] = self._trackers[t].basket_count
-            res[d, -4] = self._timestamp
             area = find_area(dets[d, 0:-1], in_door_box, out_door_box, a_box, b_box)
             if (area is not None) and (self._trackers[t].area != area):
                 if (self._trackers[t].area == 'OUT_DOOR_AREA') and (area == 'IN_DOOR_AREA'): res[d, -5] = 1  # 1 = ENTER
@@ -77,6 +76,12 @@ class Tracker(TrackerBase):
                 self._trackers[t].area = area
             else:
                 res[d, -3] = -1  # -1 = None move to special area
+            self._trackers[t].update(dets[d], self._min_hits)
+            res[d, 0:4] = dets[d, 0:-1]
+            res[d, -1] = self._trackers[t].id
+            res[d, -2] = self._trackers[t].basket_time
+            res[d, -3] = self._trackers[t].basket_count
+            res[d, -4] = self._timestamp
 
         # create and initialise new trackers for unmatched detections
         for i in unmatched_dets:
@@ -100,6 +105,12 @@ class Tracker(TrackerBase):
             else:
                 res[i, -3] = -1  # -1 = None move to special area
 
+        # Update basket to existing tracks
+        self.associate_basket2trackers(baskets)
+
+        # Update accompany people to existing tracks
+        self.count_accompany_ppl2trackers(res)
+
         # remove dead tracklet
         i = len(self._trackers)
         localIDs_end = []
@@ -107,16 +118,26 @@ class Tracker(TrackerBase):
             i -= 1
             if (trk.time_since_update > self._max_age):
                 # last_state = trk.get_last_state(-self._max_age)
-                local_id_time = concat_local_id_time(trk.id, trk.timestamp)
-                localIDs_end.append(local_id_time)
+                ppl_accompany = np.asarray(list(trk.ppl_dist.values()))
+                ppl_accompany = ppl_accompany[ppl_accompany > self._min_freq_ppl]
+                localIDs_end.append([trk.id, trk.basket_count, int(trk.basket_time), len(ppl_accompany), int(self._timestamp)])
                 self._trackers.pop(i)
-
-        # Update basket to existing tracks
-        self.associate_basket2trackers(baskets)
 
         if (len(res) > 0):
             return res, localIDs_end
-        return np.empty((0, 8)), localIDs_end
+        return np.empty((0, 9)), localIDs_end
+
+    def count_accompany_ppl2trackers(self, res):
+        for i, trki in enumerate(res):
+            for j, trkj in enumerate(res):
+                if (j <= i) or (trki[-1] < 0) or (trkj[-1] < 0): continue
+                point_trki = np.array(((trki[0] + trki[2]) / 2, (trki[1] + trki[3]) / 2))
+                point_trkj = np.array(((trkj[0] + trkj[2]) / 2, (trkj[1] + trkj[3]) / 2))
+                dist = np.linalg.norm(point_trki - point_trkj)
+                if dist > self._min_dist_ppl:
+                    for trk in self._trackers:
+                        if trk.id == int(trki[-1]):
+                            trk.ppl_dist[trk.id] = trk.ppl_dist.get(trk.id, 0) + 1
 
     def associate_basket2trackers(self, baskets):
         # get locations from existing trackers.
@@ -137,6 +158,8 @@ class Tracker(TrackerBase):
                 self._trackers[t[1]].basket_time = self._timestamp
             self._trackers[t[1]].basket_count += 1
             baskets[t[0], -1] = self._trackers[t[1]].id
+        for t in unmatched_dets:
+            baskets[t, -1] = -1     # basket not assigned has id = -1
 
 class Tracker1(TrackerBase):
     """

@@ -121,7 +121,8 @@ class CSV_Writer(object):
     def write(self, data):
         self.csv_data.append(data)
 
-    def to_csv(self, sep=',', index_label='ID'):
+    def to_csv(self, sep=',', index_label='ID', sort_column=None):
         # Output to csv file
         csv_df = pd.DataFrame(self.csv_data, columns=self.column_name)
+        if sort_column: csv_df.sort_values(by=sort_column, inplace=True)
         csv_df.to_csv(self.csv_path, index=True, index_label=index_label, sep=sep)
