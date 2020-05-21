@@ -1,13 +1,15 @@
 import time
 import cv2
 import ast
+import numpy as np
 from shapely.geometry.polygon import Polygon
-from modules.Detection.Detector_yolov3 import PersonDetector
+# from modules.Detection.Detector_yolov3 import PersonDetector
+from modules.Detection.Detector_blitznet import PersonDetector
 from modules.Tracking import Tracker
 from modules.EventDetection import EventDetector
 from modules.Visualization import Visualizer
 from helpers.settings import *
-from helpers.time_utils import get_timestamp_from_filename
+from helpers.time_utils import get_timestamp_from_filename, convert_timestamp_to_human_time
 from helpers.common_utils import CSV_Writer
 
 def process_cam_360(cam360_queue, num_loaded_model, global_tracks):
@@ -39,15 +41,17 @@ def process_cam_360(cam360_queue, num_loaded_model, global_tracks):
     is_show = os.getenv('SHOW_GUI_360') == 'TRUE'
 
     # Create instance of PersonDetector
-    detector = PersonDetector(os.getenv('CAM_360_GPU'), os.getenv('CFG_PATH'), ckpt_path=os.getenv('YOLOv3_MODEL_PATH'),
-                              cls_names=os.getenv('CLS_PATH'), augment=False)
+    # detector = PersonDetector(os.getenv('CAM_360_GPU'), os.getenv('CFG_PATH'), ckpt_path=os.getenv('YOLOv3_MODEL_PATH'),
+    #                           cls_names=os.getenv('CLS_PATH'), augment=True)
+    detector = PersonDetector(os.getenv('CAM_360_GPU'), os.getenv('CLS_PATH'), os.getenv('BLITZNET_MODEL_PATH'))
     detector.setROI(roi_x1y1, roi_x2y2)
 
     # Create instance of Tracker
-    tracker = Tracker(int(os.getenv('MAX_AGE')), int(os.getenv('MIN_HITS')), float(os.getenv('LOW_IOU_THRESHOLD')))
+    tracker = Tracker(int(os.getenv('MAX_AGE')), int(os.getenv('MIN_HITS')), float(os.getenv('LOW_IOU_THRESHOLD')),
+                      float(os.getenv('MIN_DIST_PPL')), int(os.getenv('MIN_FREQ_PPL')))
 
     # Create instance of EventDetector
-    event_detector = EventDetector(int(os.getenv('BASKET_FREQ')))
+    event_detector = EventDetector(int(os.getenv('MIN_BASKET_FREQ')))
 
     # Start frameID
     frame_cnt = 0
@@ -84,7 +88,7 @@ def process_cam_360(cam360_queue, num_loaded_model, global_tracks):
         trackers, localIDs_end = tracker.update(dets, basket_dets, in_door_area, out_door_area, shelf_a_area, shelf_b_area, none_area)
 
         # Update event detection results
-        event_detector.update(trackers, csv_writer)
+        event_detector.update(trackers, localIDs_end, csv_writer)
 
         # Share trackers to shelf cam process
         # global_tracks.to_redis(trackers, int(img_data['timestamp'] * 1000))
@@ -113,7 +117,21 @@ def process_cam_360(cam360_queue, num_loaded_model, global_tracks):
         videoWriter.release()
     cv2.destroyAllWindows()
 
-    csv_writer.to_csv(sep=',', index_label='ID')
+    # Add remaining and existing track to csv_data if end video
+    for trk in tracker._trackers:
+        if trk.id < 0: continue
+        if trk.basket_count > int(os.getenv('MIN_BASKET_FREQ')):
+            csv_writer.write((1, trk.id, 1202, 'HAS BASKET', int(trk.basket_time),
+                        convert_timestamp_to_human_time(int(trk.basket_time))))
+        else:
+            csv_writer.write((1, trk.id, 1202, 'NO BASKET', int(trk.basket_time),
+                        convert_timestamp_to_human_time(int(trk.basket_time))))
+        ppl_accompany = np.asarray(list(trk.ppl_dist.values()))
+        ppl_accompany = ppl_accompany[ppl_accompany > int(os.getenv('MIN_FREQ_PPL'))]
+        csv_writer.write((1, trk.id, 1203, 'GROUP {} PEOPLE'.format(len(ppl_accompany) + 1), int(trk.timestamp), convert_timestamp_to_human_time(int(cur_time))))
+
+    csv_writer.to_csv(sep=',', index_label='ID', sort_column=['shopper ID', 'timestamp (unix timestamp)'])
+
     engine_logger.info('Created successfully CSV file of CAM_360 !')
 
     engine_logger.critical('------ CAM_360 Engine process stopped ------')
