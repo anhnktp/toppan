@@ -8,12 +8,12 @@ def find_area(bbox, in_door_box, out_door_box, a_box, b_box):
     center_point = Point((bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2)
     top_left_point = Point(bbox[0], bbox[1])
     bottom_left_point = Point(bbox[0], bbox[3])
-    if in_door_box.contains(bottom_left_point) or in_door_box.contains(top_left_point):
-    # if in_door_box.contains(bottom_left_point):
-        return 'IN_DOOR_AREA'
     if out_door_box.contains(bottom_left_point) or out_door_box.contains(top_left_point):
     # if out_door_box.contains(bottom_left_point):
         return 'OUT_DOOR_AREA'
+    if in_door_box.contains(bottom_left_point) or in_door_box.contains(top_left_point):
+    # if in_door_box.contains(bottom_left_point):
+        return 'IN_DOOR_AREA'
     if a_box.contains(center_point):
         return 'A_AREA'
     if b_box.contains(center_point):
@@ -64,7 +64,6 @@ class Tracker(TrackerBase):
 
         matched, unmatched_dets, unmatched_trks = associate_detections_to_trackers(dets, trks, self._low_iou_threshold)
         res = np.zeros((len(dets), 9))
-
         # update matched trackers with assigned detections
         for d, t in matched:
             area = find_area(dets[d, 0:-1], in_door_box, out_door_box, a_box, b_box)
@@ -130,14 +129,14 @@ class Tracker(TrackerBase):
     def count_accompany_ppl2trackers(self, res):
         for i, trki in enumerate(res):
             for j, trkj in enumerate(res):
-                if (j <= i) or (trki[-1] < 0) or (trkj[-1] < 0): continue
+                if (j == i) or (trki[-1] < 1) or (trkj[-1] < 1): continue
                 point_trki = np.array(((trki[0] + trki[2]) / 2, (trki[1] + trki[3]) / 2))
                 point_trkj = np.array(((trkj[0] + trkj[2]) / 2, (trkj[1] + trkj[3]) / 2))
                 dist = np.linalg.norm(point_trki - point_trkj)
                 if dist > self._min_dist_ppl:
                     for trk in self._trackers:
                         if trk.id == int(trki[-1]):
-                            trk.ppl_dist[trk.id] = trk.ppl_dist.get(trk.id, 0) + 1
+                            trk.ppl_dist[int(trkj[-1])] = trk.ppl_dist.get(int(trkj[-1]), 0) + 1
 
     def associate_basket2trackers(self, baskets):
         # get locations from existing trackers.
@@ -158,8 +157,8 @@ class Tracker(TrackerBase):
                 self._trackers[t[1]].basket_time = self._timestamp
             self._trackers[t[1]].basket_count += 1
             baskets[t[0], -1] = self._trackers[t[1]].id
-        for t in unmatched_dets:
-            baskets[t, -1] = -1     # basket not assigned has id = -1
+        # for t in unmatched_dets:
+        #     baskets[t, -1] = -1     # basket not assigned has id = -1
 
 class Tracker1(TrackerBase):
     """
