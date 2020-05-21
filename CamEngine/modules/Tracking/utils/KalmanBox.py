@@ -31,6 +31,9 @@ class KalmanBoxTracker(object):
         self.time_since_update = 0
         # when initialize track, default local_id = -1 & when track has hit_streak >= min_hits, local_id is allocated
         self.id = -1
+        self.basket_count = 0
+        self.basket_time = timestamp        # First timestamp has basket
+        self.ppl_dist = {}
         self.timestamp = timestamp
         self.history = []
         # self.hits = 0
@@ -48,9 +51,9 @@ class KalmanBoxTracker(object):
         self.hit_streak += 1
         self.kf.update(convert_bbox_to_z(bbox))
         # new local_id then return True, otherwise return False
-        if (self.id == -1) and (self.hit_streak > min_hits):
+        if (self.id == -1) and (self.hit_streak > min_hits):    # ENTER
             KalmanBoxTracker.count += 1
-            self.id = int(KalmanBoxTracker.count) + 1
+            self.id = KalmanBoxTracker.count
             return True
         return False
 

@@ -59,7 +59,7 @@ class PersonDetector(DetectorBase):
             y_max = y_min + bboxes[i][3]
             if int(cats[i]) == 1:
                 person_dets.append([x_min, y_min, x_max, y_max, scores[i]])
-            elif int(cats[i] == 2):
+            elif int(cats[i] == 3):
                 basket_dets.append([x_min, y_min, x_max, y_max, scores[i]])
 
         return np.asarray(person_dets), np.asarray(basket_dets)
