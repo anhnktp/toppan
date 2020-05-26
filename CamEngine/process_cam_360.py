@@ -47,7 +47,7 @@ def process_cam_360(cam360_queue, num_loaded_model):
     detector = PersonDetector(os.getenv('CAM_360_GPU'), os.getenv('YOLOv3_CFG_PATH'), ckpt_path=os.getenv('YOLOv3_MODEL_PATH'),
                               cls_names=os.getenv('CLS_PATH'), augment=False)
     # Or use Blitznet detection
-    # detector = PersonDetector(os.getenv('CAM_360_GPU'), os.getenv('CLS_PATH'), os.getenv('BLITZNET_MODEL_PATH'))
+    # detector = PersonDetector(os.getenv('CAM_360_GPU'), os.getenv('CLS_BLITZNET_PATH'), os.getenv('BLITZNET_MODEL_PATH'))
 
     # Use SSD detection
     # detector = PersonDetector()
