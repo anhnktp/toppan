@@ -41,7 +41,6 @@ if __name__ == '__main__':
 
     # Get cam config
     engine_cams = get_engine_cams()
-    evidence_cams = get_evidence_cams()
 
     # Init engine
     if not os.path.exists(os.getenv('CROPPED_IMAGE_FOLDER')):
