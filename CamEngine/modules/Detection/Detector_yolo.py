@@ -12,7 +12,7 @@ from .yolo.yolov3 import yolov3
 
 class PersonDetector(DetectorBase):
     """
-    Using YOLOv3 version
+    Using YOLOv3 old version
     """
 
     def __init__(self):

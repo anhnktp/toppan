@@ -1,14 +1,5 @@
-# Project5_ExtractReID
-
- ExactReID is a project bult on Python3.6 for a Deeplearning Tracking technology
- It features: 
-  - Person Detection for Camera at Shelf
-  - Person Detection for 360-degree camera
-  - Pose Extraction for Camera at Shelf
-  - Camera Tracking for 360-degree camera
-  - Event Notification
-  
-# Setup Docker if Docker is not installed
+# A. Setup Docker if Docker is not installed
+If you don't use Docker, skip to Setup conda environment session B
 
 ## I. Prerequisites
 
@@ -23,7 +14,7 @@
 ### Software requirements
 
 - NVIDIA Graphics Driver 430
-- Docker, docker-compose and nvdia-docker2
+- Docker, docker-compose and nvdia-docker2 (only if you want to use Docker)
 
 ## II. Setup Instructions for Host Machine
 
@@ -105,7 +96,7 @@ sudo reboot
 - Setup to show GUI tracking 360 cam (X11 forwarding mode)
 
     - Modify [.env](.env) file
-        - SHOW_GUI=True
+        - SHOW_GUI_360=True
 
     - Setup X11
 
@@ -128,3 +119,16 @@ $ docker-compose up --build
 # Removes docker out of X server ACL if you are not working with
 $ xhost - local:docker
  ~~~
+# B. Setup Conda environment
+
+Install conda (or miniconda) from this link:
+https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html
+
+## Create env
+
+```
+conda env create -f ./CamEngine/environment.yml
+```
+
+## Test building environment successfully
+Continue update ...

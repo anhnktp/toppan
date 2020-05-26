@@ -6,6 +6,7 @@ import os.path as osp
 import cv2
 import shutil
 import pandas as pd
+from shapely.geometry import Point
 
 try:
     import accimage
@@ -126,3 +127,53 @@ class CSV_Writer(object):
         csv_df = pd.DataFrame(self.csv_data, columns=self.column_name)
         if sort_column: csv_df.sort_values(by=sort_column, inplace=True)
         csv_df.to_csv(self.csv_path, index=True, index_label=index_label, sep=sep)
+
+def filter_by_timestamp(csv_df, query_timestamp, info):
+    '''
+
+    :param csv_df: pandas dataframe
+           query_timestamp: unix timestamp
+    :return: csv_df panda dataframe after filter by csv_df['timestamp] <= query_timestamp and csv_df['timestamp] == info
+            and drop duplicate row with same 'shopper ID' and only keep row with nearest unix timestamp with query_timestamp
+    '''
+    res = csv_df.loc[(csv_df['timestamp'] <= query_timestamp) & (csv_df['info'] == info)]
+    return res.drop_duplicates(subset=['shopper ID'], keep='last')
+
+def load_csv(path, col=None):
+    return pd.read_csv(path, usecols=col).rename(columns={'timestamp (unix timestamp)': 'timestamp'})
+
+def map_id_shelf(trackers, list_shelf_id, a_left, a_right, shelf_a_area):
+
+    # if 1 event at timestamp
+    if len(list_shelf_id) == 1:
+        shelf_id = list_shelf_id[0]['shelf_id']
+        for trk in trackers:
+            if int(trk[-1]) < 0: continue
+            center_point = Point((trk[0] + trk[2]) / 2, (trk[1] + trk[3]) / 2)
+            if ((a_left.contains(center_point)) and (shelf_id <= 3)) or ((a_right.contains(center_point)) and (shelf_id >= 3)):
+                list_shelf_id[0]['local_id'] = int(trk[-1])
+                return
+        for trk in trackers:
+            if int(trk[-1]) < 0: continue
+            center_point = Point((trk[0] + trk[2]) / 2, (trk[1] + trk[3]) / 2)
+            if (shelf_a_area.contains(center_point)):
+                list_shelf_id[0]['local_id'] = int(trk[-1])
+                return
+        list_shelf_id[0]['local_id'] = None
+    else:
+        list_shelf_id = sorted(list_shelf_id, key=lambda k: k['shelf_id'])
+        list_track_info = []
+        for trk in trackers:
+            if int(trk[-1]) < 0: continue
+            center_point = Point((trk[0] + trk[2]) / 2, (trk[1] + trk[3]) / 2)
+            if (shelf_a_area.contains(center_point)):
+                list_track_info.append({'local_id': int(trk[-1]), 'x': (trk[0] + trk[2]) / 2})
+        list_track_info = sorted(list_track_info, key=lambda k: k['x'])
+        i = 0
+        for trk in list_track_info:
+            list_shelf_id[i]['local_id'] = trk['local_id']
+            i += 1
+        for t in range(i, len(list_shelf_id)):
+            list_shelf_id[t]['local_id'] = None
+        return
+

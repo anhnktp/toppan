@@ -1,4 +1,4 @@
-name: proj5
+name: proj9
 channels:
   - pytorch
   - conda-forge
@@ -163,4 +163,4 @@ dependencies:
     - flake8==3.7.9
     - isort==4.3.21
     - pandas==1.0.1
-prefix: /miniconda/envs/proj5
+prefix: /miniconda/envs/proj9
