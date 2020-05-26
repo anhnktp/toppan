@@ -3,14 +3,15 @@ import cv2
 import ast
 import numpy as np
 from shapely.geometry.polygon import Polygon
-from modules.Detection.Detector_yolov3 import PersonDetector
-# from modules.Detection.Detector_blitznet import PersonDetector
+# from modules.Detection.Detector_ssd import PersonDetector
+from modules.Detection.Detector_blitznet import PersonDetector
+# from modules.Detection.Detector_yolov3 import PersonDetector
 from modules.Tracking import Tracker
 from modules.EventDetection import EventDetector
 from modules.Visualization import Visualizer
 from helpers.settings import *
 from helpers.time_utils import get_timestamp_from_filename, convert_timestamp_to_human_time
-from helpers.common_utils import CSV_Writer, draw_polygon
+from helpers.common_utils import CSV_Writer, draw_polygon, load_csv, map_id_shelf
 
 def process_cam_360(cam360_queue, num_loaded_model, global_tracks):
 
@@ -21,6 +22,8 @@ def process_cam_360(cam360_queue, num_loaded_model, global_tracks):
     out_door_area = Polygon(ast.literal_eval(os.getenv('OUT_DOOR_AREA')))
     shelf_a_area = Polygon(ast.literal_eval(os.getenv('A_AREA')))
     shelf_b_area = Polygon(ast.literal_eval(os.getenv('B_AREA')))
+    a_left = Polygon(ast.literal_eval(os.getenv('A_LEFT')))
+    a_right = Polygon(ast.literal_eval(os.getenv('A_RIGHT')))
     none_area = Polygon(ast.literal_eval(os.getenv('NONE_AREA')))
     roi_x1y1, roi_x2y2 = ast.literal_eval(os.getenv('ROI_CAM_360'))[0], ast.literal_eval(os.getenv('ROI_CAM_360'))[1]
     img_size_cam_360 = ast.literal_eval(os.getenv('IMG_SIZE_CAM_360'))
@@ -41,9 +44,14 @@ def process_cam_360(cam360_queue, num_loaded_model, global_tracks):
     is_show = os.getenv('SHOW_GUI_360') == 'TRUE'
 
     # Create instance of PersonDetector
-    detector = PersonDetector(os.getenv('CAM_360_GPU'), os.getenv('CFG_PATH'), ckpt_path=os.getenv('YOLOv3_MODEL_PATH'),
-                              cls_names=os.getenv('CLS_PATH'), augment=False)
-    # detector = PersonDetector(os.getenv('CAM_360_GPU'), os.getenv('CLS_PATH'), os.getenv('BLITZNET_MODEL_PATH'))
+    # detector = PersonDetector(os.getenv('CAM_360_GPU'), os.getenv('YOLOv3_CFG_PATH'), ckpt_path=os.getenv('YOLOv3_MODEL_PATH'),
+    #                           cls_names=os.getenv('CLS_PATH'), augment=False)
+    # Or use Blitznet detection
+    detector = PersonDetector(os.getenv('CAM_360_GPU'), os.getenv('CLS_PATH'), os.getenv('BLITZNET_MODEL_PATH'))
+
+    # Use SSD detection
+    # detector = PersonDetector()
+
     detector.setROI(roi_x1y1, roi_x2y2)
 
     # Create instance of Tracker
@@ -68,6 +76,14 @@ def process_cam_360(cam360_queue, num_loaded_model, global_tracks):
     except:
         start_timestamp = time.time()
 
+    # Load CSV shelf touch to combine
+    csv_touch_path = 'log_shelf_touch.csv'
+    # csv_shelf_touch = load_csv(csv_touch_path, col=['shelf ID', 'hand_coords', 'timestamp (unix timestamp)'])
+    csv_shelf_touch = load_csv(csv_touch_path)
+    csv_shelf_touch['shopper ID'] = None
+    index_touch = 0
+    while (index_touch < len(csv_shelf_touch)) and (index_touch < csv_shelf_touch['timestamp'][index_touch] <= start_timestamp):
+        index_touch += 1
     while vid.isOpened():
         # if (num_loaded_model.value < num_model) or (cam360_queue.qsize() <= 0):
         #    continue
@@ -82,17 +98,37 @@ def process_cam_360(cam360_queue, num_loaded_model, global_tracks):
         # Get Detection results
         detector.setFrame(img_ori[roi_x1y1[1]:roi_x2y2[1], roi_x1y1[0]:roi_x2y2[0]])
         dets, basket_dets = detector.getOutput()
+
         # Get Tracking result
         tracker.setTimestamp(cur_time)
         trackers, localIDs_end = tracker.update(dets, basket_dets, in_door_area, out_door_area, shelf_a_area, shelf_b_area, none_area)
+
         # Update event detection results
         event_detector.update(trackers, localIDs_end, csv_writer)
-        # Share trackers to shelf cam process
-        # global_tracks.to_redis(trackers, int(img_data['timestamp'] * 1000))
+
+        # Combine touch CSV
+        if (index_touch < len(csv_shelf_touch)) and (csv_shelf_touch['timestamp'][index_touch] <= cur_time):
+            print('start map local_id')
+            anchor_time = csv_shelf_touch['timestamp'][index_touch]
+            list_shelf_id = [{'shelf_id': csv_shelf_touch['shelf ID'][index_touch],
+                              'hand_xy': csv_shelf_touch['hand_coords'][index_touch],
+                              'index': index_touch}]
+            while (index_touch < len(csv_shelf_touch) - 1) and (csv_shelf_touch['shelf ID'][index_touch + 1] == anchor_time):
+                index_touch += 1
+                list_shelf_id.append({'shelf_id': csv_shelf_touch['shelf ID'][index_touch],
+                                      'hand_xy': csv_shelf_touch['hand_coords'][index_touch],
+                                      'index': index_touch})
+            map_id_shelf(trackers, list_shelf_id, a_left, a_right, shelf_a_area)
+            for shelf_info in list_shelf_id:
+                csv_shelf_touch['shopper ID'][shelf_info['index']] = shelf_info['local_id']
+                csv_writer.write((1, shelf_info['local_id'], 1201, 'SHELF ID {}'.format(shelf_info['shelf_id']),
+                                  csv_shelf_touch['timestamp'][shelf_info['index']],
+                                  csv_shelf_touch['timestamp (UTC - JST)'][shelf_info['index']]))
+            index_touch += 1
 
         # Visualization: plot bounding boxes & trajectories
-        # draw_polygon(img_ori, ast.literal_eval(os.getenv('IN_DOOR_AREA')))
-        # draw_polygon(img_ori, ast.literal_eval(os.getenv('OUT_DOOR_AREA')))
+        draw_polygon(img_ori, ast.literal_eval(os.getenv('IN_DOOR_AREA')))
+        draw_polygon(img_ori, ast.literal_eval(os.getenv('OUT_DOOR_AREA')))
         visualizer.draw(img_ori, basket_dets, trackers, event_detector)
 
         # Display the resulting frame
@@ -130,6 +166,8 @@ def process_cam_360(cam360_queue, num_loaded_model, global_tracks):
         csv_writer.write((1, trk.id, 1203, 'GROUP {} PEOPLE'.format(len(ppl_accompany) + 1), int(cur_time), convert_timestamp_to_human_time(int(cur_time))))
 
     csv_writer.to_csv(sep=',', index_label='ID', sort_column=['shopper ID', 'timestamp (unix timestamp)'])
+
+    csv_shelf_touch.to_csv(os.getenv('CROPPED_IMAGE_FOLDER') + csv_touch_path.replace('.csv', '_combine.csv'), index=False)
 
     engine_logger.info('Created successfully CSV file of CAM_360 !')
 
