@@ -149,7 +149,7 @@ def load_csv_signage(path):
     csv_signage_df['timestamp'] = csv_signage_df['Timestamp (UTC-JST)'].values.astype(np.int64) / 10 ** 9 - 7*3600 + 1
     return csv_signage_df
 
-def map_id_shelf(trackers, list_shelf_id, a_left, a_right, shelf_a_area, shelf_ids_xy):
+def map_id_shelf(trackers, list_shelf_id, shelf_a_area, shelf_ids_xy):
     list_track_info = []
     list_local_id = []
     for trk in trackers:
@@ -182,38 +182,3 @@ def map_id_signage(trackers, sigange_area):
         if sigange_area.contains(center_point):
             list_local_id.append(int(trk[-1]))
     return list_local_id
-
-def map_id_shelf1(trackers, list_shelf_id, a_left, a_right, shelf_a_area, shelf_ids_xy):
-
-    # if 1 event at timestamp
-    if len(list_shelf_id) == 1:
-        shelf_id = list_shelf_id[0]['shelf_id']
-        for trk in trackers:
-            if int(trk[-1]) < 0: continue
-            center_point = Point((trk[0] + trk[2]) / 2, (trk[1] + trk[3]) / 2)
-            if ((a_left.contains(center_point)) and (shelf_id <= 3)) or ((a_right.contains(center_point)) and (shelf_id >= 3)):
-                list_shelf_id[0]['local_id'] = int(trk[-1])
-                return
-        for trk in trackers:
-            if int(trk[-1]) < 0: continue
-            center_point = Point((trk[0] + trk[2]) / 2, (trk[1] + trk[3]) / 2)
-            if (shelf_a_area.contains(center_point)):
-                list_shelf_id[0]['local_id'] = int(trk[-1])
-                return
-        list_shelf_id[0]['local_id'] = None
-    else:
-        list_shelf_id = sorted(list_shelf_id, key=lambda k: k['shelf_id'])
-        list_track_info = []
-        for trk in trackers:
-            if int(trk[-1]) < 0: continue
-            center_point = Point((trk[0] + trk[2]) / 2, (trk[1] + trk[3]) / 2)
-            if (shelf_a_area.contains(center_point)):
-                list_track_info.append({'local_id': int(trk[-1]), 'x': (trk[0] + trk[2]) / 2})
-        list_track_info = sorted(list_track_info, key=lambda k: k['x'])
-        i = 0
-        for trk in list_track_info:
-            list_shelf_id[i]['local_id'] = trk['local_id']
-            i += 1
-        for t in range(i, len(list_shelf_id)):
-            list_shelf_id[t]['local_id'] = None
-        return
