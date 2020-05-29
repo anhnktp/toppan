@@ -11,7 +11,7 @@ from modules.EventDetection import EventDetector
 from modules.Visualization import Visualizer
 from helpers.settings import *
 from helpers.time_utils import get_timestamp_from_filename, convert_timestamp_to_human_time
-from helpers.common_utils import CSV_Writer, draw_polygon, load_csv, map_id_shelf
+from helpers.common_utils import CSV_Writer, draw_polygon, load_csv, map_id_shelf, map_id_signage, load_csv_signage
 
 def process_cam_360(cam360_queue, num_loaded_model, global_tracks):
 
@@ -24,9 +24,12 @@ def process_cam_360(cam360_queue, num_loaded_model, global_tracks):
     shelf_b_area = Polygon(ast.literal_eval(os.getenv('B_AREA')))
     a_left = Polygon(ast.literal_eval(os.getenv('A_LEFT')))
     a_right = Polygon(ast.literal_eval(os.getenv('A_RIGHT')))
+    signage1_area = Polygon(ast.literal_eval(os.getenv('SIGNAGE1_AREA')))
+    signage2_area = Polygon(ast.literal_eval(os.getenv('SIGNAGE2_AREA')))
     none_area = Polygon(ast.literal_eval(os.getenv('NONE_AREA')))
     roi_x1y1, roi_x2y2 = ast.literal_eval(os.getenv('ROI_CAM_360'))[0], ast.literal_eval(os.getenv('ROI_CAM_360'))[1]
     img_size_cam_360 = ast.literal_eval(os.getenv('IMG_SIZE_CAM_360'))
+    shelf_ids_xy = ast.literal_eval(os.getenv('SHELF_IDS_XY'))
 
     # Create video writer
     if os.getenv('SAVE_VID') == 'TRUE':
@@ -47,7 +50,7 @@ def process_cam_360(cam360_queue, num_loaded_model, global_tracks):
     # detector = PersonDetector(os.getenv('CAM_360_GPU'), os.getenv('YOLOv3_CFG_PATH'), ckpt_path=os.getenv('YOLOv3_MODEL_PATH'),
     #                           cls_names=os.getenv('CLS_PATH'), augment=False)
     # Or use Blitznet detection
-    detector = PersonDetector(os.getenv('CAM_360_GPU'), os.getenv('CLS_PATH'), os.getenv('BLITZNET_MODEL_PATH'))
+    detector = PersonDetector(os.getenv('CAM_360_GPU'), os.getenv('CLS_BLITZNET_PATH'), os.getenv('BLITZNET_MODEL_PATH'))
 
     # Use SSD detection
     # detector = PersonDetector()
@@ -75,15 +78,30 @@ def process_cam_360(cam360_queue, num_loaded_model, global_tracks):
         start_timestamp = get_timestamp_from_filename(os.path.basename(os.getenv('RTSP_CAM_360')))
     except:
         start_timestamp = time.time()
-
     # Load CSV shelf touch to combine
     csv_touch_path = 'log_shelf_touch.csv'
-    # csv_shelf_touch = load_csv(csv_touch_path, col=['shelf ID', 'hand_coords', 'timestamp (unix timestamp)'])
     csv_shelf_touch = load_csv(csv_touch_path)
     csv_shelf_touch['shopper ID'] = None
     index_touch = 0
-    while (index_touch < len(csv_shelf_touch)) and (index_touch < csv_shelf_touch['timestamp'][index_touch] <= start_timestamp):
+    while (index_touch < len(csv_shelf_touch)) and (csv_shelf_touch['timestamp'][index_touch] <= start_timestamp):
         index_touch += 1
+    # Load CSV signage to combine
+    csv_signage1_path = 'log_signage_attention_01.csv'
+    csv_signage1 = load_csv_signage(csv_signage1_path)
+    csv_signage1['shopper ID'] = None
+    index_signage1 = 0
+    while (index_signage1 < len(csv_signage1)) and (csv_signage1['timestamp'][index_signage1] <= start_timestamp):
+        index_signage1 += 1
+
+    csv_signage2_path = 'log_signage_attention_02.csv'
+    csv_signage2 = load_csv_signage(csv_signage2_path)
+    csv_signage2['shopper ID'] = None
+    index_signage2 = 0
+    wait_frames = 0
+
+    while (index_signage2 < len(csv_signage2)) and (csv_signage2['timestamp'][index_signage2] <= start_timestamp):
+        index_signage2 += 1
+
     while vid.isOpened():
         # if (num_loaded_model.value < num_model) or (cam360_queue.qsize() <= 0):
         #    continue
@@ -108,7 +126,7 @@ def process_cam_360(cam360_queue, num_loaded_model, global_tracks):
 
         # Combine touch CSV
         if (index_touch < len(csv_shelf_touch)) and (csv_shelf_touch['timestamp'][index_touch] <= cur_time):
-            print('start map local_id')
+            print('start map local_id to shelf touch')
             anchor_time = csv_shelf_touch['timestamp'][index_touch]
             list_shelf_id = [{'shelf_id': csv_shelf_touch['shelf ID'][index_touch],
                               'hand_xy': csv_shelf_touch['hand_coords'][index_touch],
@@ -118,22 +136,60 @@ def process_cam_360(cam360_queue, num_loaded_model, global_tracks):
                 list_shelf_id.append({'shelf_id': csv_shelf_touch['shelf ID'][index_touch],
                                       'hand_xy': csv_shelf_touch['hand_coords'][index_touch],
                                       'index': index_touch})
-            map_id_shelf(trackers, list_shelf_id, a_left, a_right, shelf_a_area)
-            for shelf_info in list_shelf_id:
-                csv_shelf_touch['shopper ID'][shelf_info['index']] = shelf_info['local_id']
-                csv_writer.write((1, shelf_info['local_id'], 1201, 'SHELF ID {}'.format(shelf_info['shelf_id']),
-                                  csv_shelf_touch['timestamp'][shelf_info['index']],
-                                  csv_shelf_touch['timestamp (UTC - JST)'][shelf_info['index']]))
-            index_touch += 1
+            list_local_id = map_id_shelf(trackers, list_shelf_id, a_left, a_right, shelf_a_area, shelf_ids_xy)
+            if (wait_frames > int(os.getenv('WAIT_FRAMES'))) or len(list_local_id) > 0:
+                for shelf_info in list_shelf_id:
+                    if (isinstance(shelf_info['local_id'], list)) and (len(shelf_info['local_id']) == 1): shelf_info['local_id'] = shelf_info['local_id'][0]
+                    if (isinstance(shelf_info['local_id'], list)) and (len(shelf_info['local_id']) == 0): shelf_info['local_id'] = None
+                    csv_shelf_touch['shopper ID'][shelf_info['index']] = shelf_info['local_id']
+                    csv_writer.write((1, str(shelf_info['local_id']), 1201, 'SHELF ID {}'.format(shelf_info['shelf_id']),
+                                      csv_shelf_touch['timestamp'][shelf_info['index']],
+                                      csv_shelf_touch['timestamp (UTC - JST)'][shelf_info['index']]))
+                index_touch += 1
+                wait_frames = 0
+            else: wait_frames += 1
+
+        # Combine signage CSV
+        if (index_signage1 < len(csv_signage1)) and (csv_signage1['timestamp'][index_signage1] <= cur_time):
+            print('start map local_id to signage 1')
+            local_id_signage = map_id_signage(trackers, signage1_area)
+            time_has_attention = csv_signage1['Duration'][index_signage1].split(':')
+            duration = float(time_has_attention[2]) + float(time_has_attention[3]) / 1000
+            csv_signage1['Duration'][index_signage1] = '{}s'.format(duration)
+            if (isinstance(local_id_signage, list)) and (len(local_id_signage) == 1): local_id_signage = local_id_signage[0]
+            if (isinstance(local_id_signage, list)) and (len(local_id_signage) == 0): local_id_signage = None
+            csv_signage1['shopper ID'][index_signage1] = str(local_id_signage)
+            csv_writer.write((2, str(local_id_signage), 1517, 'HAS ATTENTION TO SIGNAGE1 IN {}s'.format(duration),
+                              csv_signage1['timestamp'][index_signage1],
+                              csv_signage1['Timestamp (UTC-JST)'][index_signage1]))
+            index_signage1 += 1
+
+        if (index_signage2 < len(csv_signage2)) and (csv_signage2['timestamp'][index_signage2] <= cur_time):
+            print('start map local_id to signage 2')
+            local_id_signage = map_id_signage(trackers, signage2_area)
+            time_has_attention = csv_signage2['Duration'][index_signage2].split(':')
+            duration = float(time_has_attention[2]) + float(time_has_attention[3]) / 1000
+            csv_signage2['Duration'][index_signage2] = '{}s'.format(duration)
+            if (isinstance(local_id_signage, list)) and (len(local_id_signage) == 1): local_id_signage = local_id_signage[0]
+            if (isinstance(local_id_signage, list)) and (len(local_id_signage) == 0): local_id_signage = None
+            csv_signage2['shopper ID'][index_signage2] = str(local_id_signage)
+            csv_writer.write((2, str(local_id_signage), 1517, 'HAS ATTENTION TO SIGNAGE2 IN {}s'.format(duration),
+                              csv_signage2['timestamp'][index_signage2],
+                              csv_signage2['Timestamp (UTC-JST)'][index_signage2]))
+            index_signage2 += 1
+
 
         # Visualization: plot bounding boxes & trajectories
-        draw_polygon(img_ori, ast.literal_eval(os.getenv('IN_DOOR_AREA')))
-        draw_polygon(img_ori, ast.literal_eval(os.getenv('OUT_DOOR_AREA')))
+        # draw_polygon(img_ori, ast.literal_eval(os.getenv('SIGNAGE2_AREA')))
+        # draw_polygon(img_ori, ast.literal_eval(os.getenv('SIGNAGE1_AREA')))
+        # draw_polygon(img_ori, ast.literal_eval(os.getenv('OUT_DOOR_AREA')))
         visualizer.draw(img_ori, basket_dets, trackers, event_detector)
 
         # Display the resulting frame
-        cv2.putText(img_ori, 'Frame #{:d} ({:.2f}ms)'.format(frame_cnt, (time.time() - start_time) * 1000), (2, 35),
-                    0, fontScale=0.6, color=(0, 255, 0), thickness=2)
+        # cv2.putText(img_ori, 'Frame #{:d} ({:.2f}ms)'.format(frame_cnt, (time.time() - start_time) * 1000), (2, 35),
+        #             0, fontScale=0.6, color=(0, 255, 0), thickness=2)
+        # cv2.putText(img_ori, '{}'.format(convert_timestamp_to_human_time(cur_time)), (2, 305),
+        #             0, fontScale=0.6, color=(0, 255, 0), thickness=2)
         if is_show: visualizer.show(img=img_ori, title='Fish-eye camera Detection and Tracking Python Demo')
 
 
@@ -167,7 +223,9 @@ def process_cam_360(cam360_queue, num_loaded_model, global_tracks):
 
     csv_writer.to_csv(sep=',', index_label='ID', sort_column=['shopper ID', 'timestamp (unix timestamp)'])
 
-    csv_shelf_touch.to_csv(os.getenv('CROPPED_IMAGE_FOLDER') + csv_touch_path.replace('.csv', '_combine.csv'), index=False)
+    csv_shelf_touch.to_csv(os.getenv('CSV_CAM_SHELF'), index=False)
+    csv_signage1.to_csv(os.getenv('CSV_CAM_SIGNAGE_01'), index=False)
+    csv_signage2.to_csv(os.getenv('CSV_CAM_SIGNAGE_02'), index=False)
 
     engine_logger.info('Created successfully CSV file of CAM_360 !')
 
