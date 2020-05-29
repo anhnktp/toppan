@@ -7,6 +7,8 @@ import cv2
 import shutil
 import pandas as pd
 from shapely.geometry import Point
+from scipy.optimize import linear_sum_assignment
+
 
 try:
     import accimage
@@ -139,9 +141,49 @@ def filter_by_timestamp(csv_df, query_timestamp, info):
     return res.drop_duplicates(subset=['shopper ID'], keep='last')
 
 def load_csv(path, col=None):
-    return pd.read_csv(path, usecols=col).rename(columns={'timestamp (unix timestamp)': 'timestamp'})
+    return pd.read_csv(path, usecols=col).rename(columns={'timestamp (unix timestamp) ': 'timestamp'})
 
-def map_id_shelf(trackers, list_shelf_id, a_left, a_right, shelf_a_area):
+def load_csv_signage(path):
+    csv_signage_df = pd.read_csv(path, parse_dates=[-4], date_parser=lambda x: pd.datetime.strptime(x, '%Y-%m-%d %H:%M:%S.%f'))
+    csv_signage_df.rename(columns={'Shopper_ID': 'shopper ID'}, inplace=True)
+    csv_signage_df['timestamp'] = csv_signage_df['Timestamp (UTC-JST)'].values.astype(np.int64) / 10 ** 9 - 7*3600 + 1
+    return csv_signage_df
+
+def map_id_shelf(trackers, list_shelf_id, a_left, a_right, shelf_a_area, shelf_ids_xy):
+    list_track_info = []
+    list_local_id = []
+    for trk in trackers:
+        if trk[-1] < 0: continue
+        center_point = Point((trk[0] + trk[2]) / 2, (trk[1] + trk[3]) / 2)
+        if (shelf_a_area.contains(center_point)):
+            list_track_info.append([(trk[0] + trk[2]) / 2, (trk[1] + trk[3]) / 2, int(trk[-1])])
+            list_local_id.append(int(trk[-1]))
+    iou_matrix = np.zeros((len(list_track_info), len(list_shelf_id)), dtype=np.float32)
+    for d, trk in enumerate(list_track_info):
+        for t, shelf_info in enumerate(list_shelf_id):
+            mid_top_point = np.array((trk[0], trk[1]))
+            shelf_id_point = np.array(shelf_ids_xy[shelf_info['shelf_id'] - 1])
+            iou_matrix[d, t] = np.linalg.norm(mid_top_point - shelf_id_point)
+    row_indices, col_indices = linear_sum_assignment(iou_matrix)
+    matched_indices = np.column_stack((row_indices, col_indices))
+    for d, t in matched_indices:
+        list_shelf_id[t]['local_id'] = list_track_info[d][-1]
+    for t, shelf_info in enumerate(list_shelf_id):
+        if (t not in matched_indices[:, 1]):
+            shelf_info['local_id'] = list_local_id
+
+    return list_local_id
+
+def map_id_signage(trackers, sigange_area):
+    list_local_id = []
+    for trk in trackers:
+        if trk[-1] < 0: continue
+        center_point = Point((trk[0] + trk[2]) / 2, (trk[1] + trk[3]) / 2)
+        if sigange_area.contains(center_point):
+            list_local_id.append(int(trk[-1]))
+    return list_local_id
+
+def map_id_shelf1(trackers, list_shelf_id, a_left, a_right, shelf_a_area, shelf_ids_xy):
 
     # if 1 event at timestamp
     if len(list_shelf_id) == 1:
