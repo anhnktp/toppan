@@ -36,6 +36,9 @@ class PoseExtraction(PoseBase):
         self.l_wrist_idx = 7
         self.r_wrist_idx = 4
 
+        self.l_elb_idx = 6
+        self.r_elb_idx = 3
+
         self._roi_top = roi_top
         self._roi_bottom = roi_bottom
 
@@ -77,7 +80,7 @@ class PoseExtraction(PoseBase):
         padded_img, pad = self.pad_width(scaled_img, self._stride, self._pad_value, min_dims)
 
         tensor_img = torch.from_numpy(padded_img).permute(2, 0, 1).unsqueeze(0).float()
-        tensor_img = tensor_img.cuda(self._gpu_number)
+        tensor_img = tensor_img.to(f'cuda:{self._gpu_number}')
 
         stages_output = self._net(tensor_img)
 
@@ -164,8 +167,8 @@ class PoseExtraction(PoseBase):
 
     def get_hand_coord(self, frame, hand_score=0.5):
         """Method to get all pair of hands coordinates."""
-        # current_poses, img, pose_entries, all_keypoints = self.predict(frame)
-        img, pose_entries, all_keypoints = self.predict_cython(frame)
+        current_poses, img, pose_entries, all_keypoints = self.predict(frame)
+        # img, pose_entries, all_keypoints = self.predict_cython(frame)
         height, width, channels = frame.shape
 
         hands = []
@@ -184,6 +187,7 @@ class PoseExtraction(PoseBase):
 
             left_hand = None
             right_hand = None
+            left_wri, right_wri, left_elb, right_elb = None, None, None, None
 
             for idx in range(self._num_kpts):
                 index_kpts = int(pose[idx])
@@ -210,12 +214,18 @@ class PoseExtraction(PoseBase):
 
                     min_height_keypoints = min(min_height_keypoints, hand_y)
                     max_height_keypoints = max(max_height_keypoints, hand_y)
-
+                    
                     if (idx == self.l_wrist_idx) and (score > hand_score):
-                        left_hand = (hand_x, hand_y)
+                        left_wri = (hand_x, hand_y)
 
                     if (idx == self.r_wrist_idx) and (score > hand_score):
-                        right_hand = (hand_x, hand_y)
+                        right_wri = (hand_x, hand_y)
+
+                    if (idx == self.l_elb_idx) and (score > hand_score):
+                        left_elb = (hand_x, hand_y)
+                    
+                    if (idx == self.r_elb_idx) and (score > hand_score):
+                        right_elb = (hand_x, hand_y)
 
             if (not is_in_shelf) \
                     and (min_width_keypoints >= width * self._roi_left) \
@@ -232,6 +242,21 @@ class PoseExtraction(PoseBase):
                     bbox = [-1, -1, -1, -1]
                 else:
                     bbox = [min_width_keypoints, min_height_keypoints, max_width_keypoints, max_height_keypoints]
+                
+                extent_scale = 2.0
+                if left_wri is not None and left_elb is not None:
+                    xm = (left_wri[0] + left_elb[0]) / 2.0
+                    ym = (left_wri[1] + left_elb[1]) / 2.0
+                    xc = xm + extent_scale * (left_wri[0] - xm)
+                    yc = ym + extent_scale * (left_wri[1] - ym)
+                    left_hand = (int(xc), int(yc))
+                if right_wri is not None and right_elb is not None:
+                    xm = (right_wri[0] + right_elb[0]) / 2.0
+                    ym = (right_wri[1] + right_elb[1]) / 2.0
+                    xc = xm + extent_scale * (right_wri[0] - xm)
+                    yc = ym + extent_scale * (right_wri[1] - ym)
+                    right_hand = (int(xc), int(yc))
+
                 hands.append((left_hand, right_hand, bbox))
 
         return hands
@@ -239,7 +264,7 @@ class PoseExtraction(PoseBase):
     def draw_hand(self, frame, hands):
         for hand in hands:
             if hand[0] is not None:
-                cv2.circle(frame, hand[0], 3, Pose.color, -1)
+                cv2.circle(frame, hand[0], 10, Pose.color, -1)
 
             if hand[1] is not None:
-                cv2.circle(frame, hand[1], 3, Pose.color, -1)
+                cv2.circle(frame, hand[1], 10, Pose.color, -1)

@@ -7,7 +7,7 @@ def count_in_area(hands, item_boxes):
     shelves = []
 
     for hand in hands:
-        for shelf_id, item_box in enumerate(item_boxes):
+        for shelf_id, item_box in item_boxes:
             if len(item_box) == 0:
                 continue
             left_hand, right_hand, bbox = hand
@@ -32,4 +32,5 @@ def inPolygon(polygon, x):
     """
     point = Point(x)
     polygon = Polygon(polygon)
+
     return polygon.contains(point)
