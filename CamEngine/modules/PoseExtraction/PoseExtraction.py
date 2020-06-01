@@ -30,7 +30,8 @@ class PoseExtraction(PoseBase):
         checkpoint = torch.load(model_path, map_location='cpu')
         load_state(self._net, checkpoint)
         self._net = self._net.eval()
-        self._net = self._net.cuda(self._gpu_number)
+        # self._net = self._net.cuda(self._gpu_number)
+        self._net = self._net.to(f'cuda:{self._gpu_number}')
 
         self.l_wrist_idx = 7
         self.r_wrist_idx = 4

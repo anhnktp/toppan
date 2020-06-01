@@ -20,7 +20,7 @@ def count_in_area(hands, item_boxes):
                 shelves.append(shelf_id)
                 have_item_event = True
 
-            if have_item_event:
+            if have_item_event: # process the next hand
                 continue
 
     return shelves
