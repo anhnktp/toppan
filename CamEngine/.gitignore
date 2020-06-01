@@ -8,10 +8,10 @@ __pycache__/
 *.manifest
 *.spec
 *.log
-*.pth
+
 CamEngine/*.jpg
 CamEngine/*.mp4
 CamEngine/*.png
 CamEngine/test*
 CamEngine/modules/Detection/detectron2/*
-CamEngine/models/*
+CamEngine/models/*.pth

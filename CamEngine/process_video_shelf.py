@@ -94,7 +94,7 @@ def process_cam_shelf(camShelf_queue, cam_type, num_loaded_model, global_tracks)
 
     previous_hands_center = []
     old_state = []
-    max_age = 8
+    max_age = 5
 
     # Get start timestamp on video
     start_time = get_start_time(os.path.basename(video_input), cam_type)
@@ -135,9 +135,9 @@ def process_cam_shelf(camShelf_queue, cam_type, num_loaded_model, global_tracks)
 
         old_state.append(hands)
 
-        if len(new_shelves_hand_touched) > 0:
-            h_time = convert_timestamp_to_human_time(cur_time)
-            print(new_shelves_hand_touched, h_time)
+        # if len(new_shelves_hand_touched) > 0:
+        #     h_time = convert_timestamp_to_human_time(cur_time)
+        #     print(new_shelves_hand_touched, h_time)
 
         # Visualize handboxes
         vis.draw_boxes(hands, frame)

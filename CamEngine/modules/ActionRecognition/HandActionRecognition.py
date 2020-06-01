@@ -20,6 +20,8 @@ class HandActionRecognition(ActionBase):
         shelf_ids_before = []
         for state in old_state:
             shelf_ids = count_in_shelf_area(state, item_boxes)
+            if len(shelf_ids) > 0:
+                print(shelf_ids)
             if (len(shelf_ids) > len(shelf_ids_before)):
                 shelf_ids_before = shelf_ids
         
