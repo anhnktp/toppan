@@ -59,7 +59,7 @@ class ConcatTracker(object):
     def extract_features(self, vectorizer=None):
         if vectorizer:
             print('Starting extract features of {} images of track id {}...'.format(len(self.images), self.track_id))
-            chunks = [self.images[i:i+300] for i in range(0, len(self.images), 300)]
+            chunks = [self.images[i:i+200] for i in range(0, len(self.images), 200)]
             self.images = []
             for chunk in chunks:
                 embeddings = vectorizer.predict(chunk)
