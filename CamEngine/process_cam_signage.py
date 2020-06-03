@@ -90,12 +90,6 @@ def process_cam_signage(cam_signage_queue, num_loaded_model):
         # Update event detection results
         event_detector.update_signage(trackers, faces, localIDs_end, csv_writer)
 
-
-        # Visualization: plot bounding boxes & trajectories
-        # draw_polygon(img_ori, ast.literal_eval(os.getenv('SIGNAGE2_AREA')))
-        # draw_polygon(img_ori, ast.literal_eval(os.getenv('SIGNAGE1_AREA')))
-        # draw_polygon(img_ori, ast.literal_eval(os.getenv('OUT_DOOR_AREA')))
-
         visualizer.draw_signage(img_ori, faces, trackers, event_detector)
 
         # Display the resulting frame
@@ -129,8 +123,6 @@ def process_cam_signage(cam_signage_queue, num_loaded_model):
 
     
     csv_writer.to_csv(sep=',', index_label='ID', sort_column=['shopper ID'])
-
-    # csv_shelf_touch.to_csv(os.getenv('CROPPED_IMAGE_FOLDER') + csv_touch_path.replace('.csv', '_combine.csv'), index=False)
 
     engine_logger.info('Created successfully CSV file of CAM_Signage !')
 
