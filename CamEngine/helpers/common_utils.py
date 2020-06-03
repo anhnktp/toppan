@@ -185,6 +185,4 @@ def map_id_signage(trackers, sigange_area):
 
 def calculate_duration(start,finish):
     duration = finish - start 
-    print (type(duration))
-    print (duration)
     return "%.2f" % duration
