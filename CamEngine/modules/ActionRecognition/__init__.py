@@ -1,1 +1,2 @@
 from .ActionRecognition import ActionRecognition
+from .HandActionRecognition import HandActionRecognition

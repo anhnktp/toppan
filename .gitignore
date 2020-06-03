@@ -126,3 +126,6 @@ dmypy.json
 .pyre/
 
 CamEngine/logs/
+
+*.pth
+CamEngine/models/*.pth
