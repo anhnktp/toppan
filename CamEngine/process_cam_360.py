@@ -9,6 +9,8 @@ from modules.Detection.Detector_blitznet import PersonDetector
 from modules.Tracking import Tracker
 from modules.EventDetection import EventDetector
 from modules.Visualization import Visualizer
+from modules.PostProcessing import TrackManager
+from modules.Vectorization import Vectorizer
 from helpers.settings import *
 from helpers.time_utils import get_timestamp_from_filename, convert_timestamp_to_human_time
 from helpers.common_utils import CSV_Writer, draw_polygon, load_csv, map_id_shelf, map_id_signage, load_csv_signage
@@ -61,6 +63,12 @@ def process_cam_360(cam360_queue, num_loaded_model):
 
     # Create instance of EventDetector
     event_detector = EventDetector(int(os.getenv('MIN_BASKET_FREQ')))
+
+    # Create instance of Vectorizer
+    vectorizer = Vectorizer(os.getenv('VECTORIZE_MODEL_PATH'), os.getenv('VECTORIZE_NET'), os.getenv('VECTORIZE_GPU'))
+    # vectorizer = None
+    # Create instance of TrackManager
+    track_manager = TrackManager(vectorizer=vectorizer)
 
     # Start frameID
     frame_cnt = 0
@@ -125,6 +133,9 @@ def process_cam_360(cam360_queue, num_loaded_model):
 
         # Update event detection results
         event_detector.update(trackers, localIDs_end, csv_writer)
+
+        # Update track_manger
+        track_manager.update(img_ori, trackers)
 
         # Combine touch CSV
         if (index_touch < len(csv_shelf_touch)) and (csv_shelf_touch['timestamp'][index_touch] <= cur_time):
@@ -212,6 +223,9 @@ def process_cam_360(cam360_queue, num_loaded_model):
     if os.getenv('SAVE_VID') == 'TRUE':
         videoWriter.release()
     cv2.destroyAllWindows()
+
+    # Post processing:
+    track_manager.post_processing()
 
     # Add remaining and existing track to csv_data if end video
     for trk in tracker._trackers:
