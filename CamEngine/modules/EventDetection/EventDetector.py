@@ -10,6 +10,13 @@ class EventDetector(object):
         self.detect_area(trackers, csv_writer)
         self.detect_has_basket_ppl(localIDs_end, csv_writer)
 
+    def update_signage(self, trackers, faces, localIDs_end, csv_writer):
+        """ 
+            Faces has structure: [[xmin, ymin, xmax, ymax, person_id]]
+        """
+        self.detect_accompany_number(localIDs_end, csv_writer)
+        self.write_attention(localIDs_end,csv_writer)
+
     def detect_area(self, trackers, csv_writer):
         self.localIDs_entered = []
         self.localIDs_exited = []
@@ -43,4 +50,30 @@ class EventDetector(object):
                 csv_writer.write((1, local_id, 1202, 'NO BASKET', timestamp, convert_timestamp_to_human_time(timestamp)))
             csv_writer.write(
                 (1, local_id, 1203, 'GROUP {} PEOPLE'.format(num_ppl + 1), timestamp, convert_timestamp_to_human_time(timestamp)))
+
+    def write_attention(self,localIDs_end,csv_writer):
+        """
+            Write the attention results to csv file
+        """
+        for items in localIDs_end:
+            local_id = items[0]
+            is_attention = items[4]
+            start_attention = items[5]
+            end_attention = items[8]
+            duration = items[6]
+
+            if is_attention == 'has_attention':
+                csv_writer.write((1, local_id, 1557, '{}'.format(is_attention), convert_timestamp_to_human_time(start_attention),
+                                                        convert_timestamp_to_human_time(end_attention), duration))
+
+    def detect_accompany_number(self, localIDs_end, csv_writer):
+        for items in localIDs_end:
+            local_id = items[0]
+            num_ppl = items[1]
+            start_time = items[2]        
+            end_time = items[3]
+            duration_group = items[7]        
+            csv_writer.write((1, local_id, 1203, 'GROUP {} PEOPLE'.format(num_ppl + 1), 
+                                convert_timestamp_to_human_time(start_time), convert_timestamp_to_human_time(end_time), duration_group))
+
 

@@ -31,9 +31,18 @@ class Visualizer(object):
             cv2.putText(img, 'B:{}'.format(", ".join(map(str, event_detector.localIDs_B))), (2, 115), 0, fontScale=0.6,
                         color=(0, 0, 255), thickness=2)
 
+    def draw_signage(self, img, faces, trackers, event_detector):
+        plot_bbox(img, faces, colours=self.colours, show_label=False)
+        plot_bbox(img, trackers, colours=self.colours, show_label=True)
+        plot_tracjectories(img, pts=self.pts, trackers=trackers, colours=self.colours)
+
     def show(self, img, title='Demo'):
         cv2.imshow(title, img)
-        cv2.waitKey(1)
+        key= cv2.waitKey(1)
+        if key & 0xFF == ord('q'):
+            quit()        
+        if key & 0xFF == ord('s'): # stop
+            cv2.waitKey(0)
 
 
 def plot_bbox(img, bboxes, colours, show_label=True):

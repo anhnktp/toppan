@@ -3,6 +3,10 @@ from shapely.geometry import Point
 from .TrackerBase import TrackerBase
 from .utils.KalmanBox import KalmanBoxTracker
 from .utils.associate_dets_trks import associate_detections_to_trackers
+from .utils.check_accompany import compare_2bboxes_area
+# from datetime import datetime
+from helpers.common_utils import calculate_duration
+import os
 
 def find_area(bbox, in_door_box, out_door_box, a_box, b_box):
     center_point = Point((bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2)
@@ -268,3 +272,162 @@ class Tracker1(TrackerBase):
         if (len(res) > 0):
             return res, np.asarray(trks_start), localIDs_end
         return np.empty((0, 8)), np.asarray(trks_start), localIDs_end
+
+class SignageTracker(TrackerBase):
+    """
+       Using SORT Tracking
+    """
+    def __init__(self, max_age=20, min_hits=5, low_iou_threshold=0.25, min_area_ratio=0.5, max_area_ratio=1.5, min_area_freq=10):
+        """
+        Sets key parameters for SORT
+        """
+        super(SignageTracker, self).__init__()
+        self._max_age = max_age
+        self._min_hits = min_hits
+        self._low_iou_threshold = low_iou_threshold
+        self._trackers = []
+        self._min_area_ratio = min_area_ratio
+        self._max_area_ratio = max_area_ratio
+        self._min_area_freq = min_area_freq
+
+    def update(self, dets, faces,headpose_Detector,frame):
+
+        """
+        Params:
+            dets - a numpy array of detections in the format [[x1,y1,x2,y2,score],[x1,y1,x2,y2,score],...]
+            Requires: this method must be called once for each frame even with empty detections.
+            NOTE: The number of objects returned may differ from the number of detections provided.
+            STRUCTURE of each return track: [xmin, ymin, xmax, ymax, bit_area, cur_time, basket_count, basket_time, local_id]
+            bit_area: 1 = ENTER, 2 = EXIT, 3 = A_AREA, 4 = B_AREA, -1 = NOT IN SPECIAL AREA
+            cur_time: current timestamp
+            basket_count: number frames track has basket
+            basket_time: if basket_count > BASKET_FREQ, basket_time is first time track has basket else first time create track
+            local_id: ID of track
+            frame: current frame
+            headpose_Detector: headpose detection model
+        """
+        # get predicted locations from existing trackers.
+        trks = np.zeros((len(self._trackers), 4))
+        to_del = []
+        for t, trk in enumerate(trks):
+            pos = self._trackers[t].predict()[0]
+            trk[:] = [pos[0], pos[1], pos[2], pos[3]]
+            if (np.any(np.isnan(pos))):
+                to_del.append(t)
+        trks = np.ma.compress_rows(np.ma.masked_invalid(trks))
+        for t in reversed(to_del):
+            self._trackers.pop(t)
+
+        matched, unmatched_dets, unmatched_trks = associate_detections_to_trackers(dets, trks, self._low_iou_threshold)
+        res = np.zeros((len(dets), 6))
+        # update matched trackers with assigned detections
+        for d, t in matched:
+            self._trackers[t].update(dets[d], self._min_hits)
+            res[d, 0:4] = dets[d, 0:-1]
+            res[d, -1] = self._trackers[t].id
+            res[d, -2] = self._timestamp
+
+        # create and initialise new trackers for unmatched detections
+        for i in unmatched_dets:
+            trk = KalmanBoxTracker(dets[i], self._timestamp)
+            self._trackers.append(trk)
+            res[i, 0:4] = dets[i, 0:-1]
+            res[i, -1] = trk.id
+            res[i, -2] = self._timestamp
+
+        # Update basket to existing tracks
+        tracked_faces = self.associate_faces2trackers(faces)
+
+        # Update accompany people to existing tracks
+        self.count_accompany_ppl2trackers(res)
+        
+        # check the attention 
+        self.check_attention(headpose_Detector,tracked_faces,frame)
+
+        # remove dead tracklet
+        i = len(self._trackers)
+        localIDs_end = []
+        for trk in reversed(self._trackers):
+            i -= 1
+            if (trk.time_since_update > self._max_age):
+                ppl_accompany = np.asarray(list(trk.ppl_dist.values()))
+                ppl_accompany = ppl_accompany[ppl_accompany > self._min_area_freq]
+                # check no attention + calculate the duration
+                if trk.cnt_frame_attention > int(os.getenv('THRESHOLD_HEADPOSE')):
+                    duration_attention = str(trk.cnt_frame_attention / int(os.getenv('FPS_CAM_SIGNAGE')))
+                    duration_group = calculate_duration(trk.basket_time, self._timestamp)
+
+                    # *IMPORTANT NOTE: basket_time: the first time the person appears in the video, just re-use 
+                    localIDs_end.append([trk.id, len(ppl_accompany), int(trk.basket_time), int(self._timestamp), 'has_attention', int(trk.start_hp_time), duration_attention, duration_group,int(trk.end_hp_time)])
+                else:
+                    duration_attention = 'None'
+                    duration_group = calculate_duration(trk.basket_time,self._timestamp)
+                    localIDs_end.append([trk.id, len(ppl_accompany), int(trk.basket_time),int(self._timestamp),'no','None',duration_attention, duration_group,'None'])
+
+                self._trackers.pop(i)
+
+        if (len(res) > 0):
+            return res, localIDs_end
+        return np.empty((0, 6)), localIDs_end
+
+    def count_accompany_ppl2trackers(self, res):
+        for i, trki in enumerate(res):
+            for j, trkj in enumerate(res):
+                if (j == i) or (trki[-1] < 1) or (trkj[-1] < 1): continue
+
+                if compare_2bboxes_area(trki[:4], trkj[:4], self._min_area_ratio, self._max_area_ratio):
+                    for trk in self._trackers:
+                        if trk.id == int(trki[-1]):
+                            trk.ppl_dist[int(trkj[-1])] = trk.ppl_dist.get(int(trkj[-1]), 0) + 1
+
+    def associate_faces2trackers(self, baskets):
+        # get locations from existing trackers.
+        trks = np.zeros((len(self._trackers), 4))
+        to_del = []
+        for t, trk in enumerate(trks):
+            pos = self._trackers[t].get_state()[0]
+            trk[:] = [pos[0], pos[1], pos[2], pos[3]]
+            if (np.any(np.isnan(pos))):
+                to_del.append(t)
+        trks = np.ma.compress_rows(np.ma.masked_invalid(trks))
+        for t in reversed(to_del):
+            self._trackers.pop(t)
+
+        matched, _, _ = associate_detections_to_trackers(baskets, trks, low_iou_threshold=0.01)
+        for t in matched:
+            baskets[t[0], -1] = self._trackers[t[1]].id
+
+        return baskets
+
+
+    def check_attention(self, detector, faces, frame):
+        """
+            Signage Camera 2: if the face appeared in the frame, immediately consider it as 'has_attention'
+            
+            Args:
+                detector: headpose detector
+                faces: bounding boxes of faces [xmin,ymin,xmax,ymax,person_id]
+                frame: current frame
+            Return:
+                None
+        """
+
+        # faces : are tracked face, associated with ID already
+        for face in faces:
+            person_id = int(face[4])
+            if person_id < 0: continue
+            face_box = face[:4]
+            yaw,pitch,roll = detector.getOutput(input_img=frame, box=face_box)
+
+            # draw prediction
+            detector.draw_axis(frame, face_box, yaw, pitch, roll,size = 40)
+
+            for index,trk in enumerate(self._trackers):
+                if int(trk.id) == person_id:
+                    # put all remaining code at here
+                    self._trackers[index].look_prediction = 'has_attention'
+                    self._trackers[index].head_pose = (yaw, pitch, roll)
+                    if self._trackers[index].cnt_frame_attention == 0:
+                        self._trackers[index].start_hp_time = self._timestamp
+                    self._trackers[index].cnt_frame_attention +=1
+                    self._trackers[index].end_hp_time = self._timestamp
