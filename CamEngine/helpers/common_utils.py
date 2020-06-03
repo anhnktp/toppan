@@ -184,33 +184,7 @@ def map_id_signage(trackers, sigange_area):
     return list_local_id
 
 def calculate_duration(start,finish):
-    '''
-        Calculate the duration of looking based on start look timestamp and end look timestamp
-        Convert the timestamp to string 
-        Convert the string to 
-    '''
-
-    # convert the unix - > string
-    converted_start = datetime.fromtimestamp(start).strftime('%Y:%m:%d %H:%M:%S.%f')
-    converted_finish = datetime.fromtimestamp(finish).strftime('%Y:%m:%d %H:%M:%S.%f')
-
-    # convert once more time 
-    converted_start = datetime.strptime(converted_start,'%Y:%m:%d %H:%M:%S.%f')
-    converted_finish = datetime.strptime(converted_finish,'%Y:%m:%d %H:%M:%S.%f')
-
-    # print ("Convert finish:", converted_finish)
-    # print ("Convert start:", converted_start)
-
-    # caclualte the difference -> convert to seconds
-    duration = converted_finish - converted_start
-    total_seconds = duration.total_seconds()
-
-    hours = int(total_seconds // 3600)
-    minutes = int((total_seconds % 3600) // 60)
-    seconds = duration.seconds
-    miliseconds = int(duration.microseconds / 1000)
-
-    # human reaable format
-    duration = '{}.{}'.format(seconds,miliseconds)
-
-    return duration
+    duration = finish - start 
+    print (type(duration))
+    print (duration)
+    return "%.2f" % duration
