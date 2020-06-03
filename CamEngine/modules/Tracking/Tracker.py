@@ -3,6 +3,8 @@ from shapely.geometry import Point
 from .TrackerBase import TrackerBase
 from .utils.KalmanBox import KalmanBoxTracker
 from .utils.associate_dets_trks import associate_detections_to_trackers
+from .utils.check_accompany import compare_2bboxes_area
+from datetime import datetime
 
 def find_area(bbox, in_door_box, out_door_box, a_box, b_box):
     center_point = Point((bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2)

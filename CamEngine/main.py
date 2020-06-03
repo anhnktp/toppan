@@ -3,6 +3,7 @@ from helpers.cam_data import get_engine_cams
 from helpers.settings import *
 from modules.DataLoader import DataLoader
 from process_cam_360 import process_cam_360
+from process_cam_signage import process_cam_signage
 
 
 if __name__ == '__main__':

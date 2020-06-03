@@ -13,7 +13,7 @@ def get_engine_cams():
         elif cam_type == 'CAM_SACKER':
             fps_cam_type = '_'.join(['FPS', 'CAM_SACKER'])
         elif cam_type == 'CAM_SIGNAGE':
-            fps_cam_type = '_'.join('FPS', 'CAM_SIGNAGE')
+            fps_cam_type = '_'.join(['FPS', 'CAM_SIGNAGE'])
         else:
             fps_cam_type = '_'.join(['FPS', 'CAM_SHELF'])
         id_cam_type = '_'.join(['ID', cam_type])

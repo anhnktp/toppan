@@ -25,14 +25,14 @@ def process_cam_signage(cam_signage_queue, num_loaded_model):
 
     # Create video writer
     if os.getenv('SAVE_VID') == 'TRUE':
-        fourcc = cv2.VideoWriter_fourcc(*'H264')
-        vid_path = join(os.getenv('CROPPED_IMAGE_FOLDER'), 'CAM_SIGNAGE.mp4')
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        vid_path = join(os.getenv('OUTPUT_DIR'), 'CAM_SIGNAGE.mp4')
         videoWriter = cv2.VideoWriter(vid_path, fourcc, int(os.getenv('FPS_CAM_360')), img_size_cam_signage)
 
     # Create list to store data in csv
     column_name = ['camera ID', 'shopper ID', 'process ID', 'info', 'timestamp (unix timestamp)',
                    'timestamp (UTC - JST)','Start_Attention_Duration','End_Attention_Duration']
-    csv_writer = CSV_Writer(column_name, os.getenv('CSV_CAM_SIGNAGE'))
+    csv_writer = CSV_Writer(column_name, os.getenv('CSV_CAM_SIGNAGE_01'))
 
     # Create instance of Visualizer
     visualizer = Visualizer(int(os.getenv('TRAJECTORIES_QUEUE_SIZE')))
@@ -93,7 +93,7 @@ def process_cam_signage(cam_signage_queue, num_loaded_model):
 
         # Visualization: plot bounding boxes & trajectories
         # draw_polygon(img_ori, ast.literal_eval(os.getenv('SIGNAGE2_AREA')))
-        draw_polygon(img_ori, ast.literal_eval(os.getenv('SIGNAGE1_AREA')))
+        # draw_polygon(img_ori, ast.literal_eval(os.getenv('SIGNAGE1_AREA')))
         # draw_polygon(img_ori, ast.literal_eval(os.getenv('OUT_DOOR_AREA')))
 
         visualizer.draw_signage(img_ori, faces, trackers, event_detector)
