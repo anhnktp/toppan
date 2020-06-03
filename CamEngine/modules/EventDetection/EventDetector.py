@@ -10,6 +10,13 @@ class EventDetector(object):
         self.detect_area(trackers, csv_writer)
         self.detect_has_basket_ppl(localIDs_end, csv_writer)
 
+    def update_signage(self, trackers, faces, localIDs_end, csv_writer):
+        """ 
+            Faces has structure: [[xmin, ymin, xmax, ymax, person_id]]
+        """
+        self.detect_accompany_number(localIDs_end, csv_writer)
+        self.write_attention(localIDs_end,csv_writer)
+
     def detect_area(self, trackers, csv_writer):
         self.localIDs_entered = []
         self.localIDs_exited = []
@@ -43,4 +50,27 @@ class EventDetector(object):
                 csv_writer.write((1, local_id, 1202, 'NO BASKET', timestamp, convert_timestamp_to_human_time(timestamp)))
             csv_writer.write(
                 (1, local_id, 1203, 'GROUP {} PEOPLE'.format(num_ppl + 1), timestamp, convert_timestamp_to_human_time(timestamp)))
+
+    def write_attention(self,localIDs_end,csv_writer):
+        """
+            Write the attention results to csv file
+        """
+        for items in localIDs_end:
+            local_id = items[0]
+            timestamp = items[2]
+            is_attention = items[3]
+            start_attention = items[4]
+            duration = items[5]
+
+            if is_attention == 'no':
+                csv_writer.write((1, local_id, 1577, '{}'.format('None'), timestamp, convert_timestamp_to_human_time(timestamp),
+                                                   'None', duration))
+            else:
+                csv_writer.write((1, local_id, 1577, '{}'.format(is_attention), timestamp, convert_timestamp_to_human_time(timestamp),
+                                                    convert_timestamp_to_human_time(start_attention), duration))
+
+    def detect_accompany_number(self, localIDs_end, csv_writer):
+        for local_id, num_ppl, timestamp,_,_,_ in localIDs_end:
+            csv_writer.write((1, local_id, 1203, 'GROUP {} PEOPLE'.format(num_ppl + 1), timestamp, convert_timestamp_to_human_time(timestamp)))
+
 

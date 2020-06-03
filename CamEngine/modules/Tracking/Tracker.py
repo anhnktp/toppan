@@ -268,3 +268,238 @@ class Tracker1(TrackerBase):
         if (len(res) > 0):
             return res, np.asarray(trks_start), localIDs_end
         return np.empty((0, 8)), np.asarray(trks_start), localIDs_end
+
+class SignageTracker(TrackerBase):
+    """
+       Using SORT Tracking
+    """
+    def __init__(self, max_age=20, min_hits=5, low_iou_threshold=0.25, min_area_ratio=0.5, max_area_ratio=1.5, min_area_freq=10):
+        """
+        Sets key parameters for SORT
+        """
+        super(SignageTracker, self).__init__()
+        self._max_age = max_age
+        self._min_hits = min_hits
+        self._low_iou_threshold = low_iou_threshold
+        self._trackers = []
+        self._min_area_ratio = min_area_ratio
+        self._max_area_ratio = max_area_ratio
+        self._min_area_freq = min_area_freq
+
+    def update(self, dets, faces,headpose_Detector,frame):
+
+        """
+        Params:
+            dets - a numpy array of detections in the format [[x1,y1,x2,y2,score],[x1,y1,x2,y2,score],...]
+            Requires: this method must be called once for each frame even with empty detections.
+            NOTE: The number of objects returned may differ from the number of detections provided.
+            STRUCTURE of each return track: [xmin, ymin, xmax, ymax, bit_area, cur_time, basket_count, basket_time, local_id]
+            bit_area: 1 = ENTER, 2 = EXIT, 3 = A_AREA, 4 = B_AREA, -1 = NOT IN SPECIAL AREA
+            cur_time: current timestamp
+            basket_count: number frames track has basket
+            basket_time: if basket_count > BASKET_FREQ, basket_time is first time track has basket else first time create track
+            local_id: ID of track
+            frame: current frame
+            headpose_Detector: headpose detection model
+        """
+        # get predicted locations from existing trackers.
+        trks = np.zeros((len(self._trackers), 4))
+        to_del = []
+        for t, trk in enumerate(trks):
+            pos = self._trackers[t].predict()[0]
+            trk[:] = [pos[0], pos[1], pos[2], pos[3]]
+            if (np.any(np.isnan(pos))):
+                to_del.append(t)
+        trks = np.ma.compress_rows(np.ma.masked_invalid(trks))
+        for t in reversed(to_del):
+            self._trackers.pop(t)
+
+        matched, unmatched_dets, unmatched_trks = associate_detections_to_trackers(dets, trks, self._low_iou_threshold)
+        res = np.zeros((len(dets), 6))
+        # update matched trackers with assigned detections
+        for d, t in matched:
+            self._trackers[t].update(dets[d], self._min_hits)
+            res[d, 0:4] = dets[d, 0:-1]
+            res[d, -1] = self._trackers[t].id
+            res[d, -2] = self._timestamp
+
+        # create and initialise new trackers for unmatched detections
+        for i in unmatched_dets:
+            trk = KalmanBoxTracker(dets[i], self._timestamp)
+            self._trackers.append(trk)
+            res[i, 0:4] = dets[i, 0:-1]
+            res[i, -1] = trk.id
+            res[i, -2] = self._timestamp
+
+        # Update basket to existing tracks
+        tracked_faces = self.associate_basket2trackers(faces)
+
+        # Update accompany people to existing tracks
+        self.count_accompany_ppl2trackers(res)
+
+        # Firstly, check the attention 
+        self.check_attention(headpose_Detector,tracked_faces,frame)
+
+        # Secondly, update the attention to existing tracks
+        self.update_attention()
+
+        # remove dead tracklet
+        i = len(self._trackers)
+        localIDs_end = []
+        for trk in reversed(self._trackers):
+            i -= 1
+            if (trk.time_since_update > self._max_age):
+                ppl_accompany = np.asarray(list(trk.ppl_dist.values()))
+                ppl_accompany = ppl_accompany[ppl_accompany > self._min_area_freq]
+                # check no attention + calculate the duration
+                if trk.attention == 'has_attention':
+                     # add more information into localIDs_end
+                    duration = self.calculate_duration(trk.start_hp_time,self._timestamp)
+                    localIDs_end.append([trk.id, len(ppl_accompany), int(self._timestamp),trk.attention,int(trk.start_hp_time),duration])
+                else:
+                    duration = 'None'
+                    localIDs_end.append([trk.id, len(ppl_accompany), int(self._timestamp),trk.attention,'None',duration])
+
+                self._trackers.pop(i)
+
+        if (len(res) > 0):
+            # tracker = numpy array?
+            return res, localIDs_end
+        return np.empty((0, 9)), localIDs_end
+
+    def count_accompany_ppl2trackers(self, res):
+        for i, trki in enumerate(res):
+            for j, trkj in enumerate(res):
+                if (j == i) or (trki[-1] < 1) or (trkj[-1] < 1): continue
+
+                if compare_2bboxes_area(trki[:4], trkj[:4], self._min_area_ratio, self._max_area_ratio):
+                    for trk in self._trackers:
+                        if trk.id == int(trki[-1]):
+                            trk.ppl_dist[int(trkj[-1])] = trk.ppl_dist.get(int(trkj[-1]), 0) + 1
+
+    def associate_basket2trackers(self, baskets):
+        # get locations from existing trackers.
+        trks = np.zeros((len(self._trackers), 4))
+        to_del = []
+        for t, trk in enumerate(trks):
+            pos = self._trackers[t].get_state()[0]
+            trk[:] = [pos[0], pos[1], pos[2], pos[3]]
+            if (np.any(np.isnan(pos))):
+                to_del.append(t)
+        trks = np.ma.compress_rows(np.ma.masked_invalid(trks))
+        for t in reversed(to_del):
+            self._trackers.pop(t)
+
+        matched, _, _ = associate_detections_to_trackers(baskets, trks, low_iou_threshold=0.01)
+        for t in matched:
+            baskets[t[0], -1] = self._trackers[t[1]].id
+
+        return baskets
+
+
+    def check_attention(self,detector,faces,frame):
+        """
+            Signage Camera 2: if the face appeared in the frame, immediately consider it as 'has_attention'
+            
+            Args:
+                detector: headpose detector
+                faces: bounding boxes of faces [xmin,ymin,xmax,ymax,person_id]
+                frame: current frame
+            Return:
+                None
+        """
+
+        # faces : are tracked face, associated with ID already
+        for face in faces:
+            person_id = int(face[4])
+            face_box = face[:4]
+            yaw,pitch,roll = detector.getOutput(input_img=frame,box=face_box)
+
+            # draw prediction
+            detector.draw_axis(frame, face_box, yaw, pitch, roll,size = 40)
+
+            for index,trk in enumerate(self._trackers):
+                if int(trk.id) == person_id:
+                    # put all remaining code at here
+                    self._trackers[index].look_prediction = 'has_attention'
+                    self._trackers[index].head_pose = (yaw,pitch,roll)
+
+
+    def calculate_duration(self,start,finish):
+        '''
+            Calculate the duration of looking based on start look timestamp and end look timestamp
+            Convert the timestamp to string 
+            Convert the string to 
+        '''
+
+        # convert the unix - > string
+        converted_start = datetime.fromtimestamp(start).strftime('%Y:%m:%d %H:%M:%S.%f')
+        converted_finish = datetime.fromtimestamp(finish).strftime('%Y:%m:%d %H:%M:%S.%f')
+
+        # convert once more time 
+        converted_start = datetime.strptime(converted_start,'%Y:%m:%d %H:%M:%S.%f')
+        converted_finish = datetime.strptime(converted_finish,'%Y:%m:%d %H:%M:%S.%f')
+
+        print ("Convert finish:", converted_finish)
+        print ("Convert start:", converted_start)
+
+        # caclualte the difference -> convert to seconds
+        duration = converted_finish - converted_start
+        total_seconds = duration.total_seconds()
+
+        hours = int(total_seconds // 3600)
+        minutes = int((total_seconds % 3600) // 60)
+        seconds = duration.seconds
+        miliseconds = int(duration.microseconds / 1000)
+
+        # human reaable format
+        duration = '{}.{} second(s)'.format(seconds,miliseconds)
+
+        return duration
+
+
+    def update_attention(self):
+        '''
+            Core part is here
+            Update the attention based on the head pose prediction
+            @TODO: Check the workflow of this one 
+        '''
+
+        MAX_HIST = 10 # it is used to concatenate the dispoints detection based on the idea of tracking
+        THRESHOLD_FRAME = 0 # it is used to control the time constraint of detection
+
+        for index,trk in enumerate(self._trackers):
+            person_id = trk.id
+            if trk.look_prediction == 'has_attention':
+                # put the prediction into track, for the first time
+                if self._trackers[index].attention == 'no':
+                    self._trackers[index].start_hp_time = self._timestamp
+                    self._trackers[index].count_look = 1
+                    self._trackers[index].attention = 'has_attention'
+
+                elif self._trackers[index].attention == 'has_attention':
+                    # reset the max_hist at the next prediction
+                    if self._trackers[index].hp_max_hist > 0 and  self._trackers[index].hp_max_hist < MAX_HIST:
+                        self._trackers[index].hp_max_hist = 0 
+                    self._trackers[index].count_look +=1 
+
+            else:
+                if self._trackers[index].attention == 'no':
+                    return
+                else:
+                    # larger than a number of frames
+                    if self._trackers[index].hp_max_hist < MAX_HIST:
+                        if self._trackers[index].hp_max_hist == 0:
+                            self._trackers[index].end_hp_time = self._timestamp
+                        self._trackers[index].hp_max_hist += 1
+                    elif self._trackers[index].count_look >= THRESHOLD_FRAME:
+                        duration = self._trackers[index].end_hp_time - self._trackers[index].start_hp_time 
+                        self._trackers[index].hp_duration.append(duration)
+                        self._trackers[index].hp_timestamp.append(self._trackers[index].start_hp_time)
+                        self._trackers[index].count_look = 0
+                        self._trackers[index].start_hp_time = None
+                        self._trackers[index].end_hp_time = None
+                        self._trackers[index].attention = 'no'
+                        self._trackers[index].hp_max_hist = 0
+                    else:
+                        return

@@ -27,7 +27,7 @@ class PersonDetector(DetectorBase):
     def getOutput(self):
         img = self.frame['data']
         # Padded resize
-        img = letterbox(img, new_shape=512)[0]
+        img = letterbox(img, new_shape=512, auto=False)[0]
         img = img[:, :, ::-1].transpose(2, 0, 1)  # BGR to RGB, to 3x416x416
         img = np.ascontiguousarray(img)
 

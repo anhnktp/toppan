@@ -30,7 +30,10 @@ if __name__ == '__main__':
 
     # Init & start engine process
     for cam_data_loader in cam_data_loaders:
-        p = Process(target=process_cam_360, args=(cam_data_loader.queue_frame, num_loaded_model))
+        if cam_data_loader._cam_type == 'CAM_360':
+            p = Process(target=process_cam_360, args=(cam_data_loader.queue_frame, num_loaded_model))
+        elif cam_data_loader._cam_type == 'CAM_SIGNAGE':
+            p = Process(target=process_cam_signage, args=(cam_data_loader.queue_frame, num_loaded_model))
         p.start()
         list_processes.append(p)
 
