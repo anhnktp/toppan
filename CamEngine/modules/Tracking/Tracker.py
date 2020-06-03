@@ -335,7 +335,7 @@ class SignageTracker(TrackerBase):
             res[i, -2] = self._timestamp
 
         # Update basket to existing tracks
-        tracked_faces = self.associate_basket2trackers(faces)
+        tracked_faces = self.associate_faces2trackers(faces)
 
         # Update accompany people to existing tracks
         self.count_accompany_ppl2trackers(res)
@@ -357,21 +357,21 @@ class SignageTracker(TrackerBase):
                 # check no attention + calculate the duration
                 if trk.attention == 'has_attention':
                      # add more information into localIDs_end
-                    duration_attention = calculate_duration(trk.start_hp_time,self._timestamp)
-                    duration_group = calculate_duration(trk.basket_time,self._timestamp)
+                    duration_attention = calculate_duration(trk.start_hp_time, self._timestamp)
+                    duration_group = calculate_duration(trk.basket_time, self._timestamp)
                     # *IMPORTANT NOTE: basket_time: the first time the person appears in the video, just re-use 
-                    localIDs_end.append([trk.id, len(ppl_accompany), int(trk.basket_time),int(self._timestamp),trk.attention,int(trk.start_hp_time),duration_attention,duration_group])
+                    localIDs_end.append([trk.id, len(ppl_accompany), int(trk.basket_time), int(self._timestamp), trk.attention, int(trk.start_hp_time), duration_attention, duration_group])
                 else:
                     duration_attention = 'None'
                     duration_group = calculate_duration(trk.basket_time,self._timestamp)
-                    localIDs_end.append([trk.id, len(ppl_accompany), int(trk.basket_time),int(self._timestamp),trk.attention,'None',duration_attention,duration_group])
+                    localIDs_end.append([trk.id, len(ppl_accompany), int(trk.basket_time),int(self._timestamp),trk.attention,'None',duration_attention, duration_group])
 
                 self._trackers.pop(i)
 
         if (len(res) > 0):
             # tracker = numpy array?
             return res, localIDs_end
-        return np.empty((0, 9)), localIDs_end
+        return np.empty((0, 6)), localIDs_end
 
     def count_accompany_ppl2trackers(self, res):
         for i, trki in enumerate(res):
@@ -383,7 +383,7 @@ class SignageTracker(TrackerBase):
                         if trk.id == int(trki[-1]):
                             trk.ppl_dist[int(trkj[-1])] = trk.ppl_dist.get(int(trkj[-1]), 0) + 1
 
-    def associate_basket2trackers(self, baskets):
+    def associate_faces2trackers(self, baskets):
         # get locations from existing trackers.
         trks = np.zeros((len(self._trackers), 4))
         to_del = []
@@ -403,7 +403,7 @@ class SignageTracker(TrackerBase):
         return baskets
 
 
-    def check_attention(self,detector,faces,frame):
+    def check_attention(self, detector, faces, frame):
         """
             Signage Camera 2: if the face appeared in the frame, immediately consider it as 'has_attention'
             
@@ -419,7 +419,7 @@ class SignageTracker(TrackerBase):
         for face in faces:
             person_id = int(face[4])
             face_box = face[:4]
-            yaw,pitch,roll = detector.getOutput(input_img=frame,box=face_box)
+            yaw,pitch,roll = detector.getOutput(input_img=frame, box=face_box)
 
             # draw prediction
             detector.draw_axis(frame, face_box, yaw, pitch, roll,size = 40)
@@ -428,41 +428,7 @@ class SignageTracker(TrackerBase):
                 if int(trk.id) == person_id:
                     # put all remaining code at here
                     self._trackers[index].look_prediction = 'has_attention'
-                    self._trackers[index].head_pose = (yaw,pitch,roll)
-
-
-    # def calculate_duration(self,start,finish):
-    #     '''
-    #         Calculate the duration of looking based on start look timestamp and end look timestamp
-    #         Convert the timestamp to string 
-    #         Convert the string to 
-    #     '''
-
-    #     # convert the unix - > string
-    #     converted_start = datetime.fromtimestamp(start).strftime('%Y:%m:%d %H:%M:%S.%f')
-    #     converted_finish = datetime.fromtimestamp(finish).strftime('%Y:%m:%d %H:%M:%S.%f')
-
-    #     # convert once more time 
-    #     converted_start = datetime.strptime(converted_start,'%Y:%m:%d %H:%M:%S.%f')
-    #     converted_finish = datetime.strptime(converted_finish,'%Y:%m:%d %H:%M:%S.%f')
-
-    #     print ("Convert finish:", converted_finish)
-    #     print ("Convert start:", converted_start)
-
-    #     # caclualte the difference -> convert to seconds
-    #     duration = converted_finish - converted_start
-    #     total_seconds = duration.total_seconds()
-
-    #     hours = int(total_seconds // 3600)
-    #     minutes = int((total_seconds % 3600) // 60)
-    #     seconds = duration.seconds
-    #     miliseconds = int(duration.microseconds / 1000)
-
-    #     # human reaable format
-    #     duration = '{}.{} second(s)'.format(seconds,miliseconds)
-
-    #     return duration
-
+                    self._trackers[index].head_pose = (yaw, pitch, roll)
 
     def update_attention(self):
         '''

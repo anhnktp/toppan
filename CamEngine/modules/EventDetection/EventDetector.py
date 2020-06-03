@@ -63,8 +63,8 @@ class EventDetector(object):
             duration = items[6]
 
             if is_attention == 'has_attention':
-                csv_writer.write((1, local_id, 1557, '{}'.format(is_attention),convert_timestamp_to_human_time(start_attention),
-                                                        convert_timestamp_to_human_time(end_attention),duration))
+                csv_writer.write((1, local_id, 1557, '{}'.format(is_attention), convert_timestamp_to_human_time(start_attention),
+                                                        convert_timestamp_to_human_time(end_attention), duration))
 
     def detect_accompany_number(self, localIDs_end, csv_writer):
         for items in localIDs_end:
@@ -74,6 +74,6 @@ class EventDetector(object):
             end_time = items[3]
             duration_group = items[7]        
             csv_writer.write((1, local_id, 1203, 'GROUP {} PEOPLE'.format(num_ppl + 1), 
-                                convert_timestamp_to_human_time(start_time), convert_timestamp_to_human_time(end_time),duration_group))
+                                convert_timestamp_to_human_time(start_time), convert_timestamp_to_human_time(end_time), duration_group))
 
 
