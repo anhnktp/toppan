@@ -30,8 +30,8 @@ def process_cam_signage(cam_signage_queue, num_loaded_model):
         videoWriter = cv2.VideoWriter(vid_path, fourcc, int(os.getenv('FPS_CAM_360')), img_size_cam_signage)
 
     # Create list to store data in csv
-    column_name = ['camera ID', 'shopper ID', 'process ID', 'info', 'timestamp (unix timestamp)',
-                   'timestamp (UTC - JST)','Start_Attention_Duration','End_Attention_Duration']
+    column_name = ['camera ID', 'shopper ID', 'process ID', 'info', 'Start_time',
+                   'End_time','Start_time_attention','Duration_attention']
     csv_writer = CSV_Writer(column_name, os.getenv('CSV_CAM_SIGNAGE_01'))
 
     # Create instance of Visualizer
@@ -120,9 +120,13 @@ def process_cam_signage(cam_signage_queue, num_loaded_model):
         if trk.id < 0: continue
         ppl_accompany = np.asarray(list(trk.ppl_dist.values()))
         ppl_accompany = ppl_accompany[ppl_accompany > int(os.getenv('MIN_AREA_FREQ'))]
-        csv_writer.write((1, trk.id, 1203, 'GROUP {} PEOPLE'.format(len(ppl_accompany) + 1), int(cur_time), convert_timestamp_to_human_time(int(cur_time))))
+        # change to new format
+        csv_writer.write((1, trk.id, 1203, 'GROUP {} PEOPLE'.format(len(ppl_accompany) + 1), 
+                                    convert_timestamp_to_human_time(trk.basket_time), 
+                                    convert_timestamp_to_human_time(int(cur_time))))
 
-    csv_writer.to_csv(sep=',', index_label='ID', sort_column=['shopper ID', 'timestamp (unix timestamp)'])
+    
+    csv_writer.to_csv(sep=',', index_label='ID', sort_column=['shopper ID'])
 
     # csv_shelf_touch.to_csv(os.getenv('CROPPED_IMAGE_FOLDER') + csv_touch_path.replace('.csv', '_combine.csv'), index=False)
 

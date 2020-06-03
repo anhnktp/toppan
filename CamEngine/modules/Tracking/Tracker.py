@@ -357,10 +357,11 @@ class SignageTracker(TrackerBase):
                 if trk.attention == 'has_attention':
                      # add more information into localIDs_end
                     duration = self.calculate_duration(trk.start_hp_time,self._timestamp)
-                    localIDs_end.append([trk.id, len(ppl_accompany), int(self._timestamp),trk.attention,int(trk.start_hp_time),duration])
+                    # *IMPORTANT NOTE: basket_time: the first time the person appears in the video, just re-use 
+                    localIDs_end.append([trk.id, len(ppl_accompany), int(trk.basket_time),int(self._timestamp),trk.attention,int(trk.start_hp_time),duration])
                 else:
                     duration = 'None'
-                    localIDs_end.append([trk.id, len(ppl_accompany), int(self._timestamp),trk.attention,'None',duration])
+                    localIDs_end.append([trk.id, len(ppl_accompany), int(trk.basket_time),int(self._timestamp),trk.attention,'None',duration])
 
                 self._trackers.pop(i)
 
