@@ -59,7 +59,7 @@ class EventDetector(object):
             local_id = items[0]
             is_attention = items[4]
             start_attention = items[5]
-            end_attention = items[3]
+            end_attention = items[8]
             duration = items[6]
 
             if is_attention == 'has_attention':
