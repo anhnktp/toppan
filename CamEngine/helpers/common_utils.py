@@ -211,6 +211,6 @@ def calculate_duration(start,finish):
     miliseconds = int(duration.microseconds / 1000)
 
     # human reaable format
-    duration = '{}.{} second(s)'.format(seconds,miliseconds)
+    duration = '{}.{}'.format(seconds,miliseconds)
 
     return duration

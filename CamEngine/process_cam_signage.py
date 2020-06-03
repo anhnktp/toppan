@@ -31,7 +31,7 @@ def process_cam_signage(cam_signage_queue, num_loaded_model):
 
     # Create list to store data in csv
     column_name = ['camera ID', 'shopper ID', 'process ID', 'info', 'Start_time',
-                   'End_time','Duration']
+                   'End_time','Duration(s)']
     csv_writer = CSV_Writer(column_name, os.getenv('CSV_CAM_SIGNAGE_01'))
 
     # Create instance of Visualizer
@@ -121,6 +121,9 @@ def process_cam_signage(cam_signage_queue, num_loaded_model):
                                     convert_timestamp_to_human_time(int(cur_time)),
                                     duration_group))
 
+        if trk.cnt_frame_attention > int(os.getenv('THRESHOLD_HEADPOSE')):
+            csv_writer.write((1,trk.id,1557,'has_attention',convert_timestamp_to_human_time(trk.start_hp_time),
+                                                            convert_timestamp_to_human_time(trk.end_hp_time),'{}'.format(str((trk.cnt_frame_attention)/ int(os.getenv('FPS_CAM_SIGNAGE'))))))
     
     csv_writer.to_csv(sep=',', index_label='ID', sort_column=['shopper ID'])
 
