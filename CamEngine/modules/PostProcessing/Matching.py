@@ -85,6 +85,7 @@ class Matching(object):
         while len(tracks) > 0:
             track = tracks[0]
             q_embeddings = track.get_embeddings().cpu()
+            # q_embeddings = track.get_median_embedding().cpu()
             to_del = [0]
             concated_id = []
             print('Start matching for track {}...'.format(track.track_id))
@@ -100,7 +101,7 @@ class Matching(object):
                                                                                     tracks[j].start_time - track.end_time))
                         candidates.append(tracks[j])
                         index_can.append(j)
-                        num_embs = tracks[j].get_embeddings().size()[0]
+                        num_embs = tracks[j].get_median_embedding().size()[0]
                         print(num_embs)
                         if num_embs < min_len:
                             min_len = num_embs
@@ -110,10 +111,12 @@ class Matching(object):
                 index_track_maps = []
                 g_embeddings = []
                 for t, can in enumerate(candidates):
-                    embs = can.get_embeddings(min_len)
+                    # embs = can.get_embeddings(min_len)
+                    embs = can.get_median_embedding()
                     g_embeddings.append(embs.cpu())
                     g_track_maps += [can.track_id] * len(embs)
                     index_track_maps += [index_can[t]] * len(embs)
+                print(g_track_maps)
 
                 # Major Voting
                 if len(g_embeddings) > 1:

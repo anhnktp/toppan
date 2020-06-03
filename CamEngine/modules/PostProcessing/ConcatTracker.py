@@ -49,6 +49,10 @@ class ConcatTracker(object):
             return torch.cat(self._embeddings, 0)[0:maxsize]
         return torch.cat(self._embeddings)
 
+    def get_median_embedding(self):
+        median_vector = torch.median(torch.cat(self._embeddings), 0).values
+        return torch.unsqueeze(median_vector, 0)
+
     def concat_track(self, track):
         self.start_time = min(self.start_time, track.start_time)
         self.end_time = max(self.end_time, track.end_time)
@@ -59,7 +63,7 @@ class ConcatTracker(object):
     def extract_features(self, vectorizer=None):
         if vectorizer:
             print('Starting extract features of {} images of track id {}...'.format(len(self.images), self.track_id))
-            chunks = [self.images[i:i+100] for i in range(0, len(self.images), 100)]
+            chunks = [self.images[i:i+50] for i in range(0, len(self.images), 50)]
             self.images = []
             for chunk in chunks:
                 embeddings = vectorizer.predict(chunk)

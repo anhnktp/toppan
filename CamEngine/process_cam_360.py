@@ -66,7 +66,7 @@ def process_cam_360(cam360_queue, num_loaded_model):
 
     # Create instance of Vectorizer
     vectorizer = Vectorizer(os.getenv('VECTORIZE_MODEL_PATH'), os.getenv('VECTORIZE_NET'), os.getenv('VECTORIZE_GPU'))
-    # vectorizer = None
+    vectorizer = None
     # Create instance of TrackManager
     track_manager = TrackManager(vectorizer=vectorizer)
 
