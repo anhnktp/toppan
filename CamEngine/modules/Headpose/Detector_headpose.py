@@ -43,7 +43,7 @@ class HeadposeDetector(DetectorBase):
         # Force the headpose model use CPU for computation
         config = tf.ConfigProto(device_count = {'CPU' : 1,
                                         'GPU' : 0})
-        # config.gpu_options.per_process_gpu_memory_fraction = 0.1
+        config.gpu_options.per_process_gpu_memory_fraction = 0.1
 
         session = tf.Session(config=config)
         K.set_session(session)

@@ -11,7 +11,7 @@ from modules.EventDetection import EventDetector
 from modules.Visualization import Visualizer
 from helpers.settings import *
 from helpers.time_utils import get_timestamp_from_filename, convert_timestamp_to_human_time
-from helpers.common_utils import CSV_Writer, draw_polygon, load_csv, map_id_shelf
+from helpers.common_utils import CSV_Writer, draw_polygon, load_csv, map_id_shelf,calculate_duration
 from modules.Headpose.Detector_headpose import HeadposeDetector
 
 
@@ -31,7 +31,7 @@ def process_cam_signage(cam_signage_queue, num_loaded_model):
 
     # Create list to store data in csv
     column_name = ['camera ID', 'shopper ID', 'process ID', 'info', 'Start_time',
-                   'End_time','Start_time_attention','Duration_attention']
+                   'End_time','Duration']
     csv_writer = CSV_Writer(column_name, os.getenv('CSV_CAM_SIGNAGE_01'))
 
     # Create instance of Visualizer
@@ -121,9 +121,11 @@ def process_cam_signage(cam_signage_queue, num_loaded_model):
         ppl_accompany = np.asarray(list(trk.ppl_dist.values()))
         ppl_accompany = ppl_accompany[ppl_accompany > int(os.getenv('MIN_AREA_FREQ'))]
         # change to new format
+        duration_group = calculate_duration(trk.basket_time,int(cur_time))
         csv_writer.write((1, trk.id, 1203, 'GROUP {} PEOPLE'.format(len(ppl_accompany) + 1), 
                                     convert_timestamp_to_human_time(trk.basket_time), 
-                                    convert_timestamp_to_human_time(int(cur_time))))
+                                    convert_timestamp_to_human_time(int(cur_time)),
+                                    duration_group))
 
     
     csv_writer.to_csv(sep=',', index_label='ID', sort_column=['shopper ID'])

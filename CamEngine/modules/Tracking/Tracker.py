@@ -4,7 +4,8 @@ from .TrackerBase import TrackerBase
 from .utils.KalmanBox import KalmanBoxTracker
 from .utils.associate_dets_trks import associate_detections_to_trackers
 from .utils.check_accompany import compare_2bboxes_area
-from datetime import datetime
+# from datetime import datetime
+from helpers.common_utils import calculate_duration
 
 def find_area(bbox, in_door_box, out_door_box, a_box, b_box):
     center_point = Point((bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2)
@@ -356,12 +357,14 @@ class SignageTracker(TrackerBase):
                 # check no attention + calculate the duration
                 if trk.attention == 'has_attention':
                      # add more information into localIDs_end
-                    duration = self.calculate_duration(trk.start_hp_time,self._timestamp)
+                    duration_attention = calculate_duration(trk.start_hp_time,self._timestamp)
+                    duration_group = calculate_duration(trk.basket_time,self._timestamp)
                     # *IMPORTANT NOTE: basket_time: the first time the person appears in the video, just re-use 
-                    localIDs_end.append([trk.id, len(ppl_accompany), int(trk.basket_time),int(self._timestamp),trk.attention,int(trk.start_hp_time),duration])
+                    localIDs_end.append([trk.id, len(ppl_accompany), int(trk.basket_time),int(self._timestamp),trk.attention,int(trk.start_hp_time),duration_attention,duration_group])
                 else:
-                    duration = 'None'
-                    localIDs_end.append([trk.id, len(ppl_accompany), int(trk.basket_time),int(self._timestamp),trk.attention,'None',duration])
+                    duration_attention = 'None'
+                    duration_group = calculate_duration(trk.basket_time,self._timestamp)
+                    localIDs_end.append([trk.id, len(ppl_accompany), int(trk.basket_time),int(self._timestamp),trk.attention,'None',duration_attention,duration_group])
 
                 self._trackers.pop(i)
 
@@ -428,37 +431,37 @@ class SignageTracker(TrackerBase):
                     self._trackers[index].head_pose = (yaw,pitch,roll)
 
 
-    def calculate_duration(self,start,finish):
-        '''
-            Calculate the duration of looking based on start look timestamp and end look timestamp
-            Convert the timestamp to string 
-            Convert the string to 
-        '''
+    # def calculate_duration(self,start,finish):
+    #     '''
+    #         Calculate the duration of looking based on start look timestamp and end look timestamp
+    #         Convert the timestamp to string 
+    #         Convert the string to 
+    #     '''
 
-        # convert the unix - > string
-        converted_start = datetime.fromtimestamp(start).strftime('%Y:%m:%d %H:%M:%S.%f')
-        converted_finish = datetime.fromtimestamp(finish).strftime('%Y:%m:%d %H:%M:%S.%f')
+    #     # convert the unix - > string
+    #     converted_start = datetime.fromtimestamp(start).strftime('%Y:%m:%d %H:%M:%S.%f')
+    #     converted_finish = datetime.fromtimestamp(finish).strftime('%Y:%m:%d %H:%M:%S.%f')
 
-        # convert once more time 
-        converted_start = datetime.strptime(converted_start,'%Y:%m:%d %H:%M:%S.%f')
-        converted_finish = datetime.strptime(converted_finish,'%Y:%m:%d %H:%M:%S.%f')
+    #     # convert once more time 
+    #     converted_start = datetime.strptime(converted_start,'%Y:%m:%d %H:%M:%S.%f')
+    #     converted_finish = datetime.strptime(converted_finish,'%Y:%m:%d %H:%M:%S.%f')
 
-        print ("Convert finish:", converted_finish)
-        print ("Convert start:", converted_start)
+    #     print ("Convert finish:", converted_finish)
+    #     print ("Convert start:", converted_start)
 
-        # caclualte the difference -> convert to seconds
-        duration = converted_finish - converted_start
-        total_seconds = duration.total_seconds()
+    #     # caclualte the difference -> convert to seconds
+    #     duration = converted_finish - converted_start
+    #     total_seconds = duration.total_seconds()
 
-        hours = int(total_seconds // 3600)
-        minutes = int((total_seconds % 3600) // 60)
-        seconds = duration.seconds
-        miliseconds = int(duration.microseconds / 1000)
+    #     hours = int(total_seconds // 3600)
+    #     minutes = int((total_seconds % 3600) // 60)
+    #     seconds = duration.seconds
+    #     miliseconds = int(duration.microseconds / 1000)
 
-        # human reaable format
-        duration = '{}.{} second(s)'.format(seconds,miliseconds)
+    #     # human reaable format
+    #     duration = '{}.{} second(s)'.format(seconds,miliseconds)
 
-        return duration
+    #     return duration
 
 
     def update_attention(self):
