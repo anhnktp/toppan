@@ -23,4 +23,4 @@ def get_timestamp_from_filename(filename, cam_type='CAM_360'):
     return time.mktime(time.strptime(human_time, '%Y:%m:%d %H:%M:%S'))
 
 def convert_timestamp_to_human_time(unix_timestamp):
-    return datetime.datetime.fromtimestamp(unix_timestamp).strftime('%Y:%m:%d %H:%M:%S')
+    return datetime.datetime.fromtimestamp(unix_timestamp).strftime('%Y:%m:%d %H:%M:%S.%f')[:-2]

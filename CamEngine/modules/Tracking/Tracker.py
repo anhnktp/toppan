@@ -4,7 +4,6 @@ from .TrackerBase import TrackerBase
 from .utils.KalmanBox import KalmanBoxTracker
 from .utils.associate_dets_trks import associate_detections_to_trackers
 from .utils.check_accompany import compare_2bboxes_area
-# from datetime import datetime
 from helpers.common_utils import calculate_duration
 import os
 
@@ -358,11 +357,11 @@ class SignageTracker(TrackerBase):
                     duration_group = calculate_duration(trk.basket_time, self._timestamp)
 
                     # *IMPORTANT NOTE: basket_time: the first time the person appears in the video, just re-use 
-                    localIDs_end.append([trk.id, len(ppl_accompany), int(trk.basket_time), int(self._timestamp), 'has_attention', int(trk.start_hp_time), duration_attention, duration_group,int(trk.end_hp_time)])
+                    localIDs_end.append([trk.id, len(ppl_accompany), trk.basket_time, self._timestamp, 'has_attention', trk.start_hp_time, duration_attention, duration_group,trk.end_hp_time])
                 else:
                     duration_attention = 'None'
                     duration_group = calculate_duration(trk.basket_time,self._timestamp)
-                    localIDs_end.append([trk.id, len(ppl_accompany), int(trk.basket_time),int(self._timestamp),'no','None',duration_attention, duration_group,'None'])
+                    localIDs_end.append([trk.id, len(ppl_accompany), trk.basket_time,self._timestamp,'no','None',duration_attention, duration_group,'None'])
 
                 self._trackers.pop(i)
 

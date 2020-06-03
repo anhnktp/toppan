@@ -115,10 +115,10 @@ def process_cam_signage(cam_signage_queue, num_loaded_model):
         ppl_accompany = np.asarray(list(trk.ppl_dist.values()))
         ppl_accompany = ppl_accompany[ppl_accompany > int(os.getenv('MIN_AREA_FREQ'))]
         # change to new format
-        duration_group = calculate_duration(trk.basket_time,int(cur_time))
+        duration_group = calculate_duration(trk.basket_time,cur_time)
         csv_writer.write((1, trk.id, 1203, 'GROUP {} PEOPLE'.format(len(ppl_accompany) + 1), 
                                     convert_timestamp_to_human_time(trk.basket_time), 
-                                    convert_timestamp_to_human_time(int(cur_time)),
+                                    convert_timestamp_to_human_time(cur_time),
                                     duration_group))
 
         if trk.cnt_frame_attention > int(os.getenv('THRESHOLD_HEADPOSE')):
