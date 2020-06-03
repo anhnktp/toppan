@@ -46,10 +46,8 @@ class KalmanBoxTracker(object):
         self.start_hp_time = None # start headpose timestamp
         self.end_hp_time = None # end headpose timestamp
         self.look_prediction = None
-        self.hp_max_hist = 0 
-        self.count_look = 0
-        self.hp_timestamp = [] # list of timestamp, may be one person have many looking states
-        self.hp_duration = []
+        self.hp_max_age = 0 
+        self.cnt_frame_attention = 0
 
     def update(self, bbox, min_hits):
         """

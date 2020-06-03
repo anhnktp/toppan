@@ -11,7 +11,7 @@ from modules.EventDetection import EventDetector
 from modules.Visualization import Visualizer
 from helpers.settings import *
 from helpers.time_utils import get_timestamp_from_filename, convert_timestamp_to_human_time
-from helpers.common_utils import CSV_Writer, draw_polygon, load_csv, map_id_shelf
+from helpers.common_utils import CSV_Writer, draw_polygon, load_csv, map_id_shelf,calculate_duration
 from modules.Headpose.Detector_headpose import HeadposeDetector
 
 
@@ -30,8 +30,8 @@ def process_cam_signage(cam_signage_queue, num_loaded_model):
         videoWriter = cv2.VideoWriter(vid_path, fourcc, int(os.getenv('FPS_CAM_360')), img_size_cam_signage)
 
     # Create list to store data in csv
-    column_name = ['camera ID', 'shopper ID', 'process ID', 'info', 'timestamp (unix timestamp)',
-                   'timestamp (UTC - JST)','Start_Attention_Duration','End_Attention_Duration']
+    column_name = ['camera ID', 'shopper ID', 'process ID', 'info', 'Start_time',
+                   'End_time','Duration(s)']
     csv_writer = CSV_Writer(column_name, os.getenv('CSV_CAM_SIGNAGE_01'))
 
     # Create instance of Visualizer
@@ -90,12 +90,6 @@ def process_cam_signage(cam_signage_queue, num_loaded_model):
         # Update event detection results
         event_detector.update_signage(trackers, faces, localIDs_end, csv_writer)
 
-
-        # Visualization: plot bounding boxes & trajectories
-        # draw_polygon(img_ori, ast.literal_eval(os.getenv('SIGNAGE2_AREA')))
-        # draw_polygon(img_ori, ast.literal_eval(os.getenv('SIGNAGE1_AREA')))
-        # draw_polygon(img_ori, ast.literal_eval(os.getenv('OUT_DOOR_AREA')))
-
         visualizer.draw_signage(img_ori, faces, trackers, event_detector)
 
         # Display the resulting frame
@@ -120,11 +114,18 @@ def process_cam_signage(cam_signage_queue, num_loaded_model):
         if trk.id < 0: continue
         ppl_accompany = np.asarray(list(trk.ppl_dist.values()))
         ppl_accompany = ppl_accompany[ppl_accompany > int(os.getenv('MIN_AREA_FREQ'))]
-        csv_writer.write((1, trk.id, 1203, 'GROUP {} PEOPLE'.format(len(ppl_accompany) + 1), int(cur_time), convert_timestamp_to_human_time(int(cur_time))))
+        # change to new format
+        duration_group = calculate_duration(trk.basket_time,int(cur_time))
+        csv_writer.write((1, trk.id, 1203, 'GROUP {} PEOPLE'.format(len(ppl_accompany) + 1), 
+                                    convert_timestamp_to_human_time(trk.basket_time), 
+                                    convert_timestamp_to_human_time(int(cur_time)),
+                                    duration_group))
 
-    csv_writer.to_csv(sep=',', index_label='ID', sort_column=['shopper ID', 'timestamp (unix timestamp)'])
-
-    # csv_shelf_touch.to_csv(os.getenv('CROPPED_IMAGE_FOLDER') + csv_touch_path.replace('.csv', '_combine.csv'), index=False)
+        if trk.cnt_frame_attention > int(os.getenv('THRESHOLD_HEADPOSE')):
+            csv_writer.write((1,trk.id,1557,'has_attention',convert_timestamp_to_human_time(trk.start_hp_time),
+                                                            convert_timestamp_to_human_time(trk.end_hp_time),'{}'.format(str((trk.cnt_frame_attention)/ int(os.getenv('FPS_CAM_SIGNAGE'))))))
+    
+    csv_writer.to_csv(sep=',', index_label='ID', sort_column=['shopper ID'])
 
     engine_logger.info('Created successfully CSV file of CAM_Signage !')
 
