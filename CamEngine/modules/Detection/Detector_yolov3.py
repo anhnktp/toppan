@@ -37,16 +37,16 @@ class PersonDetector(DetectorBase):
         # save the memory when inference
         with torch.no_grad():
             pred = self.model(img, augment=self.augment)[0]
-            pred = non_max_suppression(pred, self.conf_thres, self.iou_thres, multi_label=False, agnostic=False)
-            person_dets = []
-            basket_dets = []
-            for i, det in enumerate(pred):
-                if det is not None and len(det):
-                    # Rescale boxes from img_size to im0 size
-                    det[:, :4] = scale_coords(img.shape[2:], det[:, :4], (self.roi_x2y2[1], self.roi_x2y2[0])).round()
-                    dets = det.cpu().detach().numpy()
-                    person_dets = dets[dets[:, -1] == 0][:, 0:-1]
-                    basket_dets = dets[dets[:, -1] == 1][:, 0:-1]
-                    return person_dets, basket_dets
+        pred = non_max_suppression(pred, self.conf_thres, self.iou_thres, multi_label=False, agnostic=False)
+        person_dets = []
+        basket_dets = []
+        for i, det in enumerate(pred):
+            if det is not None and len(det):
+                # Rescale boxes from img_size to im0 size
+                det[:, :4] = scale_coords(img.shape[2:], det[:, :4], (self.roi_x2y2[1], self.roi_x2y2[0])).round()
+                dets = det.cpu().detach().numpy()
+                person_dets = dets[dets[:, -1] == 0][:, 0:-1]
+                basket_dets = dets[dets[:, -1] == 1][:, 0:-1]
+                return person_dets, basket_dets
 
-            return np.asarray(person_dets), np.asarray(basket_dets)
+        return np.asarray(person_dets), np.asarray(basket_dets)

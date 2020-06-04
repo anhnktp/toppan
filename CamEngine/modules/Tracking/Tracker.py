@@ -351,18 +351,19 @@ class SignageTracker(TrackerBase):
             if (trk.time_since_update > self._max_age):
                 ppl_accompany = np.asarray(list(trk.ppl_dist.values()))
                 ppl_accompany = ppl_accompany[ppl_accompany > self._min_area_freq]
+
                 # check no attention + calculate the duration
-                if trk.cnt_frame_attention > int(os.getenv('THRESHOLD_HEADPOSE')):
-                    duration_attention = str(trk.cnt_frame_attention / int(os.getenv('FPS_CAM_SIGNAGE')))
+                # if trk.cnt_frame_attention > int(os.getenv('THRESHOLD_HEADPOSE')):
+                if len(trk.duration_hp_list) != 0:
+                    # duration_attention = str(trk.cnt_frame_attention / int(os.getenv('FPS_CAM_SIGNAGE')))
                     duration_group = calculate_duration(trk.basket_time, self._timestamp)
 
                     # *IMPORTANT NOTE: basket_time: the first time the person appears in the video, just re-use 
-                    localIDs_end.append([trk.id, len(ppl_accompany), trk.basket_time, self._timestamp, 'has_attention', trk.start_hp_time, duration_attention, duration_group,trk.end_hp_time])
+                    localIDs_end.append([trk.id, len(ppl_accompany), trk.basket_time, self._timestamp, 'has_attention', trk.start_hp_list, trk.duration_hp_list, duration_group,trk.end_hp_list])
                 else:
                     duration_attention = 'None'
                     duration_group = calculate_duration(trk.basket_time,self._timestamp)
                     localIDs_end.append([trk.id, len(ppl_accompany), trk.basket_time,self._timestamp,'no','None',duration_attention, duration_group,'None'])
-
                 self._trackers.pop(i)
 
         if (len(res) > 0):
@@ -398,9 +399,17 @@ class SignageTracker(TrackerBase):
 
         return baskets
 
+    def is_valid_headpose(self,yaw,pitch,roll):
+        """
+            Check the head pose condition based on 3 angles
+        """
+        if ((yaw > -20.5) & (yaw <20.5) & (roll > -20.5) & (roll < 20.5)):
+            return True
+        return False
 
     def check_attention(self, detector, faces, frame):
         """
+            Signage Camera 1: Check the headpose 
             Signage Camera 2: if the face appeared in the frame, immediately consider it as 'has_attention'
             
             Args:
@@ -411,22 +420,36 @@ class SignageTracker(TrackerBase):
                 None
         """
 
-        # faces : are tracked face, associated with ID already
-        for face in faces:
-            person_id = int(face[4])
-            if person_id < 0: continue
-            face_box = face[:4]
-            yaw,pitch,roll = detector.getOutput(input_img=frame, box=face_box)
+        for index, trk in enumerate(self._trackers):
+            if trk.id < 0 : continue
 
-            # draw prediction
-            detector.draw_axis(frame, face_box, yaw, pitch, roll,size = 40)
+            face_box = [face[:4] for face in faces if int(face[4]) == int(trk.id)]
 
-            for index,trk in enumerate(self._trackers):
-                if int(trk.id) == person_id:
-                    # put all remaining code at here
-                    self._trackers[index].look_prediction = 'has_attention'
-                    self._trackers[index].head_pose = (yaw, pitch, roll)
+            if len(face_box) != 0:
+                # calculate yaw,pitch, roll 
+                yaw,pitch, roll = detector.getOutput(input_img=frame, box=face_box[0])
+                # draw the prediction
+                detector.draw_axis(frame, face_box[0], yaw, pitch, roll,size = 40)
+
+                if (os.getenv('SIGNAGE_ID') == '1' and self.is_valid_headpose(yaw,pitch,roll)) or (os.getenv('SIGNAGE_ID') == '2'):
+                    if self._trackers[index].hp_max_age > 0 and self._trackers[index].hp_max_age < os.getenv('MAX_AGE_HP'):
+                        self._trackers[index].hp_max_age = 0
+
                     if self._trackers[index].cnt_frame_attention == 0:
+                        self._trackers[index].attention = True
                         self._trackers[index].start_hp_time = self._timestamp
+                        self._trackers[index].start_hp_list.append(self._timestamp)
                     self._trackers[index].cnt_frame_attention +=1
                     self._trackers[index].end_hp_time = self._timestamp
+
+            else:
+                if self._trackers[index].attention:
+                    self._trackers[index].hp_max_age += 1
+                    if self._trackers[index].hp_max_age > os.getenv('MAX_AGE_HP'):
+                        # update the duration + reset the state
+                        self._trackers[index].end_hp_time = self._timestamp
+                        self._trackers[index].end_hp_list.append(self._timestamp)
+                        self._trackers[index].duration_hp_list.append(str(trk.cnt_frame_attention / int(os.getenv('FPS_CAM_SIGNAGE'))))
+                        self._trackers[index].attention = False
+                        self._trackers[index].hp_max_age = 0 
+                        self._trackers[index].cnt_frame_attention = 0

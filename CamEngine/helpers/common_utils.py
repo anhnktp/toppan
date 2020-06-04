@@ -187,3 +187,10 @@ def calculate_duration(start,finish):
     """ Calculate the duration time base on the start_time and finish_time """
     duration = finish - start 
     return "%.2f" % duration
+
+def update_camera_id(filename):
+    """ Update the camera id based on the filename """
+    if 'signage2' in os.path.basename(filename).split('_'):
+        os.environ['SIGNAGE_ID']='2'
+    else:
+        os.environ['SIGNAGE_ID']='1'
