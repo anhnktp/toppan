@@ -432,7 +432,7 @@ class SignageTracker(TrackerBase):
                 detector.draw_axis(frame, face_box[0], yaw, pitch, roll,size = 40)
 
                 if (os.getenv('SIGNAGE_ID') == '1' and self.is_valid_headpose(yaw,pitch,roll)) or (os.getenv('SIGNAGE_ID') == '2'):
-                    if self._trackers[index].hp_max_age > 0 and self._trackers[index].hp_max_age < os.getenv('MAX_AGE_HP'):
+                    if self._trackers[index].hp_max_age > 0 and self._trackers[index].hp_max_age < int(os.getenv('MAX_AGE_HP')):
                         self._trackers[index].hp_max_age = 0
 
                     if self._trackers[index].cnt_frame_attention == 0:
@@ -445,7 +445,7 @@ class SignageTracker(TrackerBase):
             else:
                 if self._trackers[index].attention:
                     self._trackers[index].hp_max_age += 1
-                    if self._trackers[index].hp_max_age > os.getenv('MAX_AGE_HP'):
+                    if self._trackers[index].hp_max_age > int(os.getenv('MAX_AGE_HP')):
                         # update the duration + reset the state
                         self._trackers[index].end_hp_time = self._timestamp
                         self._trackers[index].end_hp_list.append(self._timestamp)
