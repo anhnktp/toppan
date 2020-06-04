@@ -353,11 +353,8 @@ class SignageTracker(TrackerBase):
                 ppl_accompany = ppl_accompany[ppl_accompany > self._min_area_freq]
 
                 # check no attention + calculate the duration
-                # if trk.cnt_frame_attention > int(os.getenv('THRESHOLD_HEADPOSE')):
                 if len(trk.duration_hp_list) != 0:
-                    # duration_attention = str(trk.cnt_frame_attention / int(os.getenv('FPS_CAM_SIGNAGE')))
                     duration_group = calculate_duration(trk.basket_time, self._timestamp)
-
                     # *IMPORTANT NOTE: basket_time: the first time the person appears in the video, just re-use 
                     localIDs_end.append([trk.id, len(ppl_accompany), trk.basket_time, self._timestamp, 'has_attention', trk.start_hp_list, trk.duration_hp_list, duration_group,trk.end_hp_list])
                 else:
@@ -409,8 +406,8 @@ class SignageTracker(TrackerBase):
 
     def check_attention(self, detector, faces, frame):
         """
-            Signage Camera 1: Check the headpose 
-            Signage Camera 2: if the face appeared in the frame, immediately consider it as 'has_attention'
+            Signage Camera 1: Check the headpose angles 
+            Signage Camera 2: if the face appeared in the frame, immediately consider it as 'has_attention'. No check headpose angles
             
             Args:
                 detector: headpose detector
