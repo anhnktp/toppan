@@ -57,6 +57,7 @@ class EventDetector(object):
         """
         for items in localIDs_end:
             local_id = items[0]
+            if local_id < 0: continue
             is_attention = items[4]
             start_attention = items[5]
             end_attention = items[8]
@@ -69,6 +70,7 @@ class EventDetector(object):
     def detect_accompany_number(self, localIDs_end, csv_writer):
         for items in localIDs_end:
             local_id = items[0]
+            if local_id < 0: continue
             num_ppl = items[1]
             start_time = items[2]        
             end_time = items[3]

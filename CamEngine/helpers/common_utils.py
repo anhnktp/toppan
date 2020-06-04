@@ -184,5 +184,6 @@ def map_id_signage(trackers, sigange_area):
     return list_local_id
 
 def calculate_duration(start,finish):
+    """ Calculate the duration time base on the start_time and finish_time """
     duration = finish - start 
     return "%.2f" % duration
