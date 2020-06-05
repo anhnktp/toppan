@@ -3,8 +3,6 @@ import cv2
 import ast
 import numpy as np
 from shapely.geometry.polygon import Polygon
-# from modules.Detection.Detector_ssd import PersonDetector
-# from modules.Detection.Detector_blitznet import PersonDetector
 from modules.Detection.Detector_yolov3 import PersonDetector
 from modules.Tracking import SignageTracker
 from modules.EventDetection import EventDetector
@@ -122,7 +120,6 @@ def process_cam_signage(cam_signage_queue, num_loaded_model):
                                     convert_timestamp_to_human_time(trk.basket_time), 
                                     convert_timestamp_to_human_time(cur_time),
                                     duration_group))
-
 
         if len(trk.duration_hp_list) != 0:
             for start,end,duration in zip(trk.start_hp_list,trk.end_hp_list,trk.duration_hp_list):
