@@ -41,14 +41,15 @@ class KalmanBoxTracker(object):
         self.area = None
         # self.age = 0
 
-        self.attention = 'no'
-        self.head_pose = None
+        self.attention = False
         self.start_hp_time = None # start headpose timestamp
         self.end_hp_time = None # end headpose timestamp
-        self.look_prediction = None
         self.hp_max_age = 0 
         self.cnt_frame_attention = 0
-
+        self.duration_hp_list = []
+        self.start_hp_list = []
+        self.end_hp_list = []
+ 
     def update(self, bbox, min_hits):
         """
         Updates the state vector with observed bbox.
