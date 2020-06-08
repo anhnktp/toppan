@@ -13,7 +13,7 @@ from modules.PostProcessing import TrackManager
 from modules.Vectorization import Vectorizer
 from helpers.settings import *
 from helpers.time_utils import get_timestamp_from_filename, convert_timestamp_to_human_time
-from helpers.common_utils import CSV_Writer, draw_polygon, load_csv, map_id_shelf, map_id_signage, load_csv_signage, map_local_id
+from helpers.common_utils import CSV_Writer, draw_polygon, load_csv, map_id_shelf, map_id_signage, load_csv_signage, map_local_id, to_csv
 
 import pandas as pd
 
@@ -308,7 +308,7 @@ def process_cam_360(cam360_queue, num_loaded_model):
     second_csv_df = pd.DataFrame(csv_writer.csv_data, columns=csv_writer.column_name)
     csv_df = csv_df.append(second_csv_df)
 
-    csv_writer.to_csv(sep=',', index_label='ID', sort_column=['shopper ID', 'timestamp (unix timestamp)'], csv_df=csv_df)
+    to_csv(csv_path=os.getenv('CSV_CAM_360'), sep=',', index_label='ID', sort_column=['shopper ID', 'timestamp (unix timestamp)'], csv_df=csv_df)
     csv_shelf_touch.to_csv(os.getenv('CSV_CAM_SHELF'), index=False)
     csv_signage1.to_csv(os.getenv('CSV_CAM_SIGNAGE_01'), index=False)
     csv_signage2.to_csv(os.getenv('CSV_CAM_SIGNAGE_02'), index=False)

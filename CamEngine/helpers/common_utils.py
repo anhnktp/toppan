@@ -112,6 +112,11 @@ def draw_polygon(img, box, colour=(0, 0, 255), thickness=2):
     '''
     cv2.polylines(img, [np.asarray(box, np.int32)], True, colour, thickness=thickness)
 
+def to_csv(csv_path, sep=',', index_label='ID', sort_column=None, csv_df=None):
+    # Output to csv file
+    if sort_column: csv_df.sort_values(by=sort_column, inplace=True)
+    csv_df.to_csv(csv_path, index=True, index_label=index_label, sep=sep)
+
 
 class CSV_Writer(object):
 
@@ -124,8 +129,9 @@ class CSV_Writer(object):
     def write(self, data):
         self.csv_data.append(data)
 
-    def to_csv(self, sep=',', index_label='ID', sort_column=None, csv_df=None):
+    def to_csv(self, sep=',', index_label='ID', sort_column=None):
         # Output to csv file
+        csv_df = pd.DataFrame(self.csv_data, columns=self.column_name)
         if sort_column: csv_df.sort_values(by=sort_column, inplace=True)
         csv_df.to_csv(self.csv_path, index=True, index_label=index_label, sep=sep)
 
