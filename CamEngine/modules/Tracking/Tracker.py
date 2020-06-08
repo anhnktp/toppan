@@ -122,7 +122,7 @@ class Tracker(TrackerBase):
                 # last_state = trk.get_last_state(-self._max_age)
                 ppl_accompany = np.asarray(list(trk.ppl_dist.values()))
                 ppl_accompany = ppl_accompany[ppl_accompany > self._min_freq_ppl]
-                localIDs_end.append([trk.id, trk.basket_count, int(trk.basket_time), len(ppl_accompany), int(self._timestamp)])
+                localIDs_end.append([trk.id, trk.basket_count, trk.basket_time, len(ppl_accompany), self._timestamp])
                 self._trackers.pop(i)
 
         if (len(res) > 0):

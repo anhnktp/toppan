@@ -5,6 +5,8 @@ class ConcatTracker(object):
     def __init__(self, track_id, img_obj, event_name=None, vectorizer=None):
         self.start_time = img_obj['timestamp']
         self.end_time = img_obj['timestamp']
+        self.start_point = img_obj['center']
+        self.end_point = img_obj['center']
         self.track_id = track_id
         self._events = {}
         self.concatenated_tracks = []
@@ -18,6 +20,7 @@ class ConcatTracker(object):
 
     def add_image(self, img_obj, event_name=None, vectorizer=None):
         self.end_time = img_obj['timestamp']
+        self.end_point = img_obj['center']
         if event_name and (event_name not in self._events):
             self._events[event_name] = img_obj['timestamp']
         if vectorizer:
@@ -45,13 +48,13 @@ class ConcatTracker(object):
         return self.images
 
     def get_embeddings(self, maxsize=-1):
-        if maxsize > 0:
-            return torch.cat(self._embeddings, 0)[0:maxsize]
-        return torch.cat(self._embeddings)
+        if (maxsize > 0):
+            # return torch.cat(self._embeddings, 0)[0:maxsize]
+            return torch.cat(self._embeddings, 0)[::maxsize]
+        return torch.cat(self._embeddings, 0)
 
     def get_median_embedding(self):
-        median_vector = torch.median(torch.cat(self._embeddings), 0).values
-        return torch.unsqueeze(median_vector, 0)
+        return torch.median(torch.cat(self._embeddings), 0, keepdim=True).values
 
     def concat_track(self, track):
         self.start_time = min(self.start_time, track.start_time)
@@ -63,7 +66,7 @@ class ConcatTracker(object):
     def extract_features(self, vectorizer=None):
         if vectorizer:
             print('Starting extract features of {} images of track id {}...'.format(len(self.images), self.track_id))
-            chunks = [self.images[i:i+50] for i in range(0, len(self.images), 50)]
+            chunks = [self.images[i:i+300] for i in range(0, len(self.images), 300)]
             self.images = []
             for chunk in chunks:
                 embeddings = vectorizer.predict(chunk)

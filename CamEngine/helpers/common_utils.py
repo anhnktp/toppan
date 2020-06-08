@@ -124,9 +124,8 @@ class CSV_Writer(object):
     def write(self, data):
         self.csv_data.append(data)
 
-    def to_csv(self, sep=',', index_label='ID', sort_column=None):
+    def to_csv(self, sep=',', index_label='ID', sort_column=None, csv_df=None):
         # Output to csv file
-        csv_df = pd.DataFrame(self.csv_data, columns=self.column_name)
         if sort_column: csv_df.sort_values(by=sort_column, inplace=True)
         csv_df.to_csv(self.csv_path, index=True, index_label=index_label, sep=sep)
 
@@ -186,3 +185,13 @@ def map_id_signage(trackers, sigange_area):
 def calculate_duration(start,finish):
     duration = finish - start 
     return "%.2f" % duration
+
+def map_local_id(list_local_id, matched_tracks, garbage_tracks):
+    list_local_id = list(set(list_local_id) - set(garbage_tracks))
+    for i in range(0, len(list_local_id)):
+        for track_id, concated_tracks in matched_tracks.items():
+            if list_local_id[i] in concated_tracks:
+                list_local_id[i] = track_id
+                break
+
+    return list(set(list_local_id))

@@ -1,6 +1,7 @@
 import sys
 from torchreid import metrics
 import torch
+import numpy as np
 
 class Matching(object):
 
@@ -75,7 +76,39 @@ class Matching(object):
             # if track.is_completed_track:
             #     track_manager.remove_track(track.track_id)
             for t in reversed(to_del): tracks.pop(t)
-        print(matched_tracks)
+
+        return matched_tracks
+
+    @staticmethod
+    def match_by_distance(tracks, interruption_threshold=5):
+        matched_tracks = {}
+        while len(tracks) > 0:
+            track = tracks[0]
+            to_del = [0]
+            concated_id = []
+            print('Start matching for track {}...'.format(track.track_id))
+            tail_tracks = sorted(range(1, len(tracks)), key=lambda t: tracks[t].start_time)
+
+            while True:
+                min_dist = sys.maxsize
+                candidate = None
+                for j in tail_tracks:
+                    if (not tracks[j].is_enter_track()) and (track.end_time < tracks[j].start_time) \
+                            and (tracks[j].start_time - track.end_time < interruption_threshold):
+                        print('>>> Candidate track {} has distance time: {}'.format(tracks[j].track_id,
+                                                                                    tracks[j].start_time - track.end_time))
+                        dist = np.linalg.norm(tracks[j].start_point - track.end_point)
+                        print('>>> Candidate track {} has distance pixel: {}'.format(tracks[j].track_id, dist))
+                        if dist < min_dist:
+                            min_dist = dist
+                            candidate = j
+                if candidate is None: break
+                track.concat_track(tracks[candidate])
+                to_del.append(candidate)
+                concated_id.append(tracks[candidate].track_id)
+
+            matched_tracks[track.track_id] = concated_id
+            for t in reversed(to_del): tracks.pop(t)
 
         return matched_tracks
 
@@ -84,7 +117,7 @@ class Matching(object):
         matched_tracks = {}
         while len(tracks) > 0:
             track = tracks[0]
-            q_embeddings = track.get_embeddings().cpu()
+            q_embeddings = track.get_embeddings(20).cpu()
             # q_embeddings = track.get_median_embedding().cpu()
             to_del = [0]
             concated_id = []
@@ -101,22 +134,24 @@ class Matching(object):
                                                                                     tracks[j].start_time - track.end_time))
                         candidates.append(tracks[j])
                         index_can.append(j)
-                        num_embs = tracks[j].get_median_embedding().size()[0]
+                        # num_embs = tracks[j].get_median_embedding().size()[0]
+                        num_embs = tracks[j].get_embeddings().size()[0]
                         print(num_embs)
                         if num_embs < min_len:
                             min_len = num_embs
-                print('Min len gallery for each track: {}'.format(min_len))
                 if len(candidates) == 0: break
+                print('Min len gallery for each track: {}'.format(min_len))
                 g_track_maps = []
                 index_track_maps = []
                 g_embeddings = []
                 for t, can in enumerate(candidates):
-                    # embs = can.get_embeddings(min_len)
-                    embs = can.get_median_embedding()
+                    embs = can.get_embeddings(min_len)
+                    print(embs.size())
+                    # embs = can.get_median_embedding()
                     g_embeddings.append(embs.cpu())
                     g_track_maps += [can.track_id] * len(embs)
                     index_track_maps += [index_can[t]] * len(embs)
-                print(g_track_maps)
+                # print(g_track_maps)
 
                 # Major Voting
                 if len(g_embeddings) > 1:
@@ -155,9 +190,6 @@ class Matching(object):
                     track.concat_track(tracks[index_can[0]])
 
             matched_tracks[track.track_id] = concated_id
-            # if track.is_completed_track:
-            #     track_manager.remove_track(track.track_id)
             for t in reversed(to_del): tracks.pop(t)
-        print(matched_tracks)
 
         return matched_tracks

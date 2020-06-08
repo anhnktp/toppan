@@ -30,16 +30,16 @@ class EventDetector(object):
             human_time = convert_timestamp_to_human_time(d[-4])
             if bit_area == 1:
                 self.localIDs_entered.append(int(d[-1]))
-                csv_writer.write((1, int(d[-1]), 1200, 'ENTRANCE', int(d[-4]), human_time))
+                csv_writer.write((1, int(d[-1]), 1200, 'ENTRANCE', d[-4], human_time))
             if bit_area == 2:
                 self.localIDs_exited.append(int(d[-1]))
-                csv_writer.write((1, int(d[-1]), 1200, 'EXIT', int(d[-4]), human_time))
+                csv_writer.write((1, int(d[-1]), 1200, 'EXIT', d[-4], human_time))
             if bit_area == 3:
                 self.localIDs_A.append(int(d[-1]))
-                csv_writer.write((1, int(d[-1]), 1200, 'A', int(d[-4]), human_time))
+                csv_writer.write((1, int(d[-1]), 1200, 'A', d[-4], human_time))
             if bit_area == 4:
                 self.localIDs_B.append(int(d[-1]))
-                csv_writer.write((1, int(d[-1]), 1200, 'B', int(d[-4]), human_time))
+                csv_writer.write((1, int(d[-1]), 1200, 'B', d[-4], human_time))
 
     def detect_has_basket_ppl(self, localIDs_end, csv_writer):
         for local_id, basket_cnt, basket_time, num_ppl, timestamp in localIDs_end:

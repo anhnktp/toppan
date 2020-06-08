@@ -1,5 +1,6 @@
 from .ConcatTracker import ConcatTracker
 from .Matching import Matching
+import numpy as np
 
 class TrackManager(object):
 
@@ -11,7 +12,8 @@ class TrackManager(object):
         for trk in trackers:
             if trk[-1] < 1: continue
             track_id = int(trk[-1])
-            img_obj = {'data': img[int(trk[1]):int(trk[3]), int(trk[0]):int(trk[2])], 'timestamp': trk[-4]}
+            img_obj = {'data': img[int(trk[1]):int(trk[3]), int(trk[0]):int(trk[2])], 'timestamp': trk[-4],
+                       'center': np.array(((trk[0] + trk[2]) / 2, (trk[1] + trk[3]) / 2))}
             if int(trk[-5]) == 1: event_name = 'ENTER'
             elif int(trk[-5]) == 2: event_name = 'EXIT'
             else: event_name = None
@@ -31,6 +33,8 @@ class TrackManager(object):
                 track.extract_features(self._vectorizer)
 
         # Start matching
+        # tracks = sorted(self.get_tracks().values(), key=lambda t: t.start_time)
+        tracks = sorted(self.get_tracks().values(), key=lambda t: t.end_time)
         if self._vectorizer:
             # Matching by vectorization
             # enter_tracks = self.get_enter_tracks()
@@ -53,20 +57,51 @@ class TrackManager(object):
             #         map(str, track.concatenated_tracks))))
             # print('----- Unmatched tracks -----')
             # print(','.join(map(str, unmatched_tracks)))
-            tracks = sorted(self.get_tracks().values(), key=lambda t: t.start_time)
-            matched_tracks = Matching.match_by_visual(tracks, interruption_threshold=10, dist_metric='cosine')
-            print('----- Matching results -----')
-            for track_id, concated_tracks in matched_tracks.items():
-                print(
-                    'The track {} is concatenated with: {}'.format(track_id, ', '.join(map(str, concated_tracks))))
+            matched_tracks = Matching.match_by_visual(tracks, interruption_threshold=5, dist_metric='cosine')
+
         else:
             # Matching by timestamp
-            tracks = sorted(self.get_tracks().values(), key=lambda t: t.start_time)
-            matched_tracks = Matching.match_by_timestamp(tracks, interruption_threshold=10)
-            print('----- Matching results -----')
-            for track_id, concated_tracks in matched_tracks.items():
-                print(
-                    'The track {} is concatenated with: {}'.format(track_id, ', '.join(map(str, concated_tracks))))
+            # matched_tracks = Matching.match_by_timestamp(tracks, interruption_threshold=5)
+            # Matching by distance
+            matched_tracks = Matching.match_by_distance(tracks, interruption_threshold=5)
+
+        garbage_tracks = []
+        completed_tracks = []
+        other_tracks = []
+        for track_id, concated_tracks in matched_tracks.items():
+            if (len(concated_tracks) == 0) and (not self.tracks[track_id].is_enter_track()) and (not self.tracks[track_id].is_exit_track()):
+                garbage_tracks.append(track_id)
+            elif (self.tracks[track_id].is_completed_track()):
+                completed_tracks.append(track_id)
+                completed_tracks.extend(concated_tracks)
+            else: other_tracks.append(self.tracks[track_id])
+
+        for track_id in completed_tracks: self.remove_track(track_id)
+        for track_id in garbage_tracks:
+            self.remove_track(track_id)
+            del matched_tracks[track_id]
+
+        # Double matching
+        to_del = []
+        tracks = sorted(other_tracks, key=lambda t: t.start_time)
+        second_matched_tracks = Matching.match_by_timestamp(tracks, interruption_threshold=1e9)
+        for track_id, concated_tracks in second_matched_tracks.items():
+            for concated_id in concated_tracks:
+                matched_tracks[track_id].append(concated_id)
+                matched_tracks[track_id].extend(matched_tracks[concated_id])
+                to_del.append(concated_id)
+
+        for track_id in to_del:
+            del matched_tracks[track_id]
+
+        print('----- Matched track -----')
+        for track_id, concated_tracks in matched_tracks.items():
+            print(
+                'The track {} is concatenated with: {}'.format(track_id, ', '.join(map(str, concated_tracks))))
+        print('----- Unmatched track -----')
+        print(','.join(map(str, garbage_tracks)))
+
+        return matched_tracks, garbage_tracks
 
     def get_tracks(self):
         return self.tracks

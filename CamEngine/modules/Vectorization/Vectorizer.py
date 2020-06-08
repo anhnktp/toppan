@@ -5,7 +5,7 @@ class Vectorizer(object):
 
     def __init__(self, model_path, model_name, device='cpu'):
         self._model_path = model_path
-        self._feature_extractor = FeatureExtractor(model_name=model_name, model_path=model_path, device=device)
+        self._feature_extractor = FeatureExtractor(model_name=model_name, model_path=model_path, device=device, pixel_norm=True)
 
     def predict(self, images):
         return self._feature_extractor(images)
