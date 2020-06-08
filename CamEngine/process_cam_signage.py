@@ -3,15 +3,13 @@ import cv2
 import ast
 import numpy as np
 from shapely.geometry.polygon import Polygon
-# from modules.Detection.Detector_ssd import PersonDetector
-# from modules.Detection.Detector_blitznet import PersonDetector
 from modules.Detection.Detector_yolov3 import PersonDetector
 from modules.Tracking import SignageTracker
 from modules.EventDetection import EventDetector
 from modules.Visualization import Visualizer
 from helpers.settings import *
 from helpers.time_utils import get_timestamp_from_filename, convert_timestamp_to_human_time
-from helpers.common_utils import CSV_Writer, draw_polygon, load_csv, map_id_shelf,calculate_duration
+from helpers.common_utils import CSV_Writer, draw_polygon, load_csv, map_id_shelf,calculate_duration,update_camera_id
 from modules.Headpose.Detector_headpose import HeadposeDetector
 
 
@@ -70,6 +68,8 @@ def process_cam_signage(cam_signage_queue, num_loaded_model):
     except:
         start_timestamp = time.time()
 
+    update_camera_id(os.getenv('RTSP_CAM_SIGNAGE'))
+
     while vid.isOpened():
         _, img1 = vid.read()
         if not _: break
@@ -121,10 +121,11 @@ def process_cam_signage(cam_signage_queue, num_loaded_model):
                                     convert_timestamp_to_human_time(cur_time),
                                     duration_group))
 
-        if trk.cnt_frame_attention > int(os.getenv('THRESHOLD_HEADPOSE')):
-            csv_writer.write((1,trk.id,1557,'has_attention',convert_timestamp_to_human_time(trk.start_hp_time),
-                                                            convert_timestamp_to_human_time(trk.end_hp_time),'{}'.format(str((trk.cnt_frame_attention)/ int(os.getenv('FPS_CAM_SIGNAGE'))))))
-    
+        if len(trk.duration_hp_list) != 0:
+            for start,end,duration in zip(trk.start_hp_list,trk.end_hp_list,trk.duration_hp_list):
+                csv_writer.write((1,trk.id,1557,'has_attention',convert_timestamp_to_human_time(start),
+                                                                convert_timestamp_to_human_time(end),duration))
+
     csv_writer.to_csv(sep=',', index_label='ID', sort_column=['shopper ID'])
 
     engine_logger.info('Created successfully CSV file of CAM_Signage !')
