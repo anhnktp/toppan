@@ -9,7 +9,7 @@ from modules.EventDetection import EventDetector
 from modules.Visualization import Visualizer
 from helpers.settings import *
 from helpers.time_utils import get_timestamp_from_filename, convert_timestamp_to_human_time
-from helpers.common_utils import CSV_Writer, draw_polygon, load_csv, map_id_shelf,calculate_duration,update_camera_id
+from helpers.common_utils import CSV_Writer, draw_polygon, load_csv, map_id_shelf,calculate_duration, update_camera_id
 from modules.Headpose.Detector_headpose import HeadposeDetector
 
 

@@ -195,3 +195,10 @@ def map_local_id(list_local_id, matched_tracks, garbage_tracks):
                 break
 
     return list(set(list_local_id))
+
+def update_camera_id(filename):
+    """ Update the camera id based on the filename """
+    if 'signage2' in os.path.basename(filename).split('_'):
+        os.environ['SIGNAGE_ID']='2'
+    else:
+        os.environ['SIGNAGE_ID']='1'
