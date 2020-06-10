@@ -9,7 +9,7 @@ from modules.EventDetection import EventDetector
 from modules.Visualization import Visualizer
 from helpers.settings import *
 from helpers.time_utils import get_timestamp_from_filename, convert_timestamp_to_human_time
-from helpers.common_utils import CSV_Writer, draw_polygon, load_csv, map_id_shelf,calculate_duration, update_camera_id
+from helpers.common_utils import CSV_Writer, draw_polygon, load_csv, map_id_shelf, calculate_duration, update_camera_id
 from modules.Headpose.Detector_headpose import HeadposeDetector
 
 
@@ -21,16 +21,20 @@ def process_cam_signage(cam_signage_queue, num_loaded_model):
     roi_x1y1, roi_x2y2 = ast.literal_eval(os.getenv('ROI_CAM_SIGNAGE'))[0], ast.literal_eval(os.getenv('ROI_CAM_SIGNAGE'))[1]
     img_size_cam_signage = ast.literal_eval(os.getenv('IMG_SIZE_CAM_SIGNAGE'))
 
+    # Get cam signage id
+    cam_id = update_camera_id(os.getenv('RTSP_CAM_SIGNAGE'))
+
     # Create video writer
     if os.getenv('SAVE_VID') == 'TRUE':
         fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        vid_path = join(os.getenv('OUTPUT_DIR'), 'CAM_SIGNAGE.mp4')
+        vid_path = join(os.getenv('OUTPUT_DIR'), 'CAM_SIGNAGE_{:02}.mp4'.format(cam_id))
         videoWriter = cv2.VideoWriter(vid_path, fourcc, int(os.getenv('FPS_CAM_360')), img_size_cam_signage)
 
     # Create list to store data in csv
+
     column_name = ['camera ID', 'shopper ID', 'process ID', 'info', 'Start_time',
                    'End_time','Duration(s)']
-    csv_writer = CSV_Writer(column_name, os.getenv('CSV_CAM_SIGNAGE_01'))
+    csv_writer = CSV_Writer(column_name, os.getenv('CSV_CAM_SIGNAGE_{:02}'.format(cam_id)))
 
     # Create instance of Visualizer
     visualizer = Visualizer(int(os.getenv('TRAJECTORIES_QUEUE_SIZE')))
@@ -67,8 +71,6 @@ def process_cam_signage(cam_signage_queue, num_loaded_model):
         start_timestamp = get_timestamp_from_filename(os.path.basename(os.getenv('RTSP_CAM_SIGNAGE')))
     except:
         start_timestamp = time.time()
-
-    update_camera_id(os.getenv('RTSP_CAM_SIGNAGE'))
 
     while vid.isOpened():
         _, img1 = vid.read()
@@ -116,14 +118,14 @@ def process_cam_signage(cam_signage_queue, num_loaded_model):
         ppl_accompany = ppl_accompany[ppl_accompany > int(os.getenv('MIN_AREA_FREQ'))]
         # change to new format
         duration_group = calculate_duration(trk.basket_time,cur_time)
-        csv_writer.write((1, trk.id, 1203, 'GROUP {} PEOPLE'.format(len(ppl_accompany) + 1), 
+        csv_writer.write((cam_id, trk.id, 1203, 'GROUP {} PEOPLE'.format(len(ppl_accompany) + 1),
                                     convert_timestamp_to_human_time(trk.basket_time), 
                                     convert_timestamp_to_human_time(cur_time),
                                     duration_group))
 
         if len(trk.duration_hp_list) != 0:
             for start,end,duration in zip(trk.start_hp_list,trk.end_hp_list,trk.duration_hp_list):
-                csv_writer.write((1,trk.id,1557,'has_attention',convert_timestamp_to_human_time(start),
+                csv_writer.write((cam_id,trk.id,1557,'has_attention',convert_timestamp_to_human_time(start),
                                                                 convert_timestamp_to_human_time(end),duration))
 
     csv_writer.to_csv(sep=',', index_label='ID', sort_column=['shopper ID'])

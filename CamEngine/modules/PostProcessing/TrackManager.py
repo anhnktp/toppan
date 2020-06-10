@@ -33,8 +33,8 @@ class TrackManager(object):
                 track.extract_features(self._vectorizer)
 
         # Start matching
-        # tracks = sorted(self.get_tracks().values(), key=lambda t: t.start_time)
         tracks = sorted(self.get_tracks().values(), key=lambda t: t.end_time)
+        # tracks = sorted(self.get_tracks().values(), key=lambda t: t.end_time)
         if self._vectorizer:
             # Matching by vectorization
             # enter_tracks = self.get_enter_tracks()
@@ -66,25 +66,21 @@ class TrackManager(object):
             matched_tracks = Matching.match_by_distance(tracks, interruption_threshold=5)
 
         garbage_tracks = []
-        completed_tracks = []
         other_tracks = []
         for track_id, concated_tracks in matched_tracks.items():
             if (len(concated_tracks) == 0) and (not self.tracks[track_id].is_enter_track()) and (not self.tracks[track_id].is_exit_track()):
                 garbage_tracks.append(track_id)
-            elif (self.tracks[track_id].is_completed_track()):
-                completed_tracks.append(track_id)
-                completed_tracks.extend(concated_tracks)
-            else: other_tracks.append(self.tracks[track_id])
-
-        for track_id in completed_tracks: self.remove_track(track_id)
+            elif (not self.tracks[track_id].is_completed_track()):
+                other_tracks.append(self.tracks[track_id])
         for track_id in garbage_tracks:
             self.remove_track(track_id)
             del matched_tracks[track_id]
 
         # Double matching
         to_del = []
-        tracks = sorted(other_tracks, key=lambda t: t.start_time)
-        second_matched_tracks = Matching.match_by_timestamp(tracks, interruption_threshold=1e9)
+        tracks = sorted(other_tracks, key=lambda t: t.end_time)
+        print('Start double matching ...')
+        second_matched_tracks = Matching.match_by_timestamp(tracks, interruption_threshold=100)
         for track_id, concated_tracks in second_matched_tracks.items():
             for concated_id in concated_tracks:
                 matched_tracks[track_id].append(concated_id)
@@ -93,6 +89,21 @@ class TrackManager(object):
 
         for track_id in to_del:
             del matched_tracks[track_id]
+
+        to_del = []
+        completed_tracks = []
+        for track_id, concated_tracks in matched_tracks.items():
+            if (not self.tracks[track_id].is_enter_track()) and (not self.tracks[track_id].is_exit_track()):
+                garbage_tracks.append(track_id)
+                garbage_tracks.extend(concated_tracks)
+                to_del.append(track_id)
+            elif (self.tracks[track_id].is_completed_track()):
+                completed_tracks.append(track_id)
+                completed_tracks.extend(concated_tracks)
+
+        for track_id in to_del:
+            del matched_tracks[track_id]
+        for track_id in completed_tracks: self.remove_track(track_id)
 
         print('----- Matched track -----')
         for track_id, concated_tracks in matched_tracks.items():

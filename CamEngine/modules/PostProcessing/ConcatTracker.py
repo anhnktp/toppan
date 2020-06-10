@@ -28,13 +28,13 @@ class ConcatTracker(object):
             self.images.append(img_obj['data'])
 
     def is_enter_track(self):
-        return ('ENTER' in self._events) and ('EXIT' not in self._events)
+        return ('ENTER' in self._events)
 
     def is_tail_track(self):
         return (len(self._events) == 0) or ('EXIT' in self._events)
 
     def is_exit_track(self):
-        return ('ENTER' not in self._events) and ('EXIT' in self._events)
+        return ('EXIT' in self._events)
 
     def is_completed_track(self):
         return ('ENTER' in self._events) and ('EXIT' in self._events)

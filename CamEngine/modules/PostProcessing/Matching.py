@@ -64,8 +64,11 @@ class Matching(object):
             to_del = [0]
             concated_id = []
             print('Start matching for track {}...'.format(track.track_id))
-            for j in range(1, len(tracks)):
-                if (not tracks[j].is_enter_track()) and (track.end_time < tracks[j].start_time) \
+            tail_tracks = sorted(range(1, len(tracks)), key=lambda t: tracks[t].start_time)
+            print('--------------')
+            for j in tail_tracks:
+                if (track.is_exit_track()) or (track.is_completed_track()): break
+                if (not track.is_exit_track()) and (not tracks[j].is_enter_track()) and (track.end_time < tracks[j].start_time) \
                         and (tracks[j].start_time - track.end_time < interruption_threshold):
                     print('>>> Candidate track {} has distance time: {}'.format(tracks[j].track_id, tracks[j].start_time - track.end_time))
                     track.concat_track(tracks[j])
@@ -92,6 +95,8 @@ class Matching(object):
             while True:
                 min_dist = sys.maxsize
                 candidate = None
+                if (track.is_exit_track()) or (track.is_completed_track()): break
+                print('--------------')
                 for j in tail_tracks:
                     if (not tracks[j].is_enter_track()) and (track.end_time < tracks[j].start_time) \
                             and (tracks[j].start_time - track.end_time < interruption_threshold):
@@ -122,13 +127,16 @@ class Matching(object):
             to_del = [0]
             concated_id = []
             print('Start matching for track {}...'.format(track.track_id))
+            tail_tracks = sorted(range(1, len(tracks)), key=lambda t: tracks[t].start_time)
             while True:
                 # Select candidates
                 index_can = []
                 candidates = []
                 min_len = sys.maxsize
-                for j in range(1, len(tracks)):
-                    if (not tracks[j].is_enter_track()) and (track.end_time < tracks[j].start_time) \
+                if (track.is_exit_track()) or (track.is_completed_track()): break
+                print('--------------')
+                for j in tail_tracks:
+                    if (not track.is_exit_track()) and (not tracks[j].is_enter_track()) and (track.end_time < tracks[j].start_time) \
                             and (tracks[j].start_time - track.end_time < interruption_threshold):
                         print('>>> Candidate track {} has distance time: {}'.format(tracks[j].track_id,
                                                                                     tracks[j].start_time - track.end_time))
@@ -151,7 +159,6 @@ class Matching(object):
                     g_embeddings.append(embs.cpu())
                     g_track_maps += [can.track_id] * len(embs)
                     index_track_maps += [index_can[t]] * len(embs)
-                # print(g_track_maps)
 
                 # Major Voting
                 if len(g_embeddings) > 1:

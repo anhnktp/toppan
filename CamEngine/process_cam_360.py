@@ -13,7 +13,7 @@ from modules.PostProcessing import TrackManager
 from modules.Vectorization import Vectorizer
 from helpers.settings import *
 from helpers.time_utils import get_timestamp_from_filename, convert_timestamp_to_human_time
-from helpers.common_utils import CSV_Writer, draw_polygon, load_csv, map_id_shelf, map_id_signage, load_csv_signage, map_local_id, to_csv
+from helpers.common_utils import CSV_Writer, draw_polygon, load_csv, map_id_shelf, map_id_signage, load_csv_signage, map_local_id
 
 import pandas as pd
 
@@ -88,23 +88,20 @@ def process_cam_360(cam360_queue, num_loaded_model):
         start_timestamp = time.time()
 
     # Load CSV shelf touch to combine
-    csv_touch_path = 'log_shelf_touch.csv'
-    csv_shelf_touch = load_csv(csv_touch_path)
+    csv_shelf_touch = load_csv(os.getenv('CSV_TOUCH_SHELF_PATH'))
     csv_shelf_touch['shopper ID'] = None
     index_touch = 0
     while (index_touch < len(csv_shelf_touch)) and (csv_shelf_touch['timestamp'][index_touch] <= start_timestamp):
         index_touch += 1
 
     # Load CSV signage to combine
-    csv_signage1_path = 'log_signage_attention_01.csv'
-    csv_signage1 = load_csv_signage(csv_signage1_path)
+    csv_signage1 = load_csv_signage(os.getenv('CSV_SIGNAGE_01_PATH'))
     csv_signage1['shopper ID'] = None
     index_signage1 = 0
     while (index_signage1 < len(csv_signage1)) and (csv_signage1['timestamp'][index_signage1] <= start_timestamp):
         index_signage1 += 1
 
-    csv_signage2_path = 'log_signage_attention_02.csv'
-    csv_signage2 = load_csv_signage(csv_signage2_path)
+    csv_signage2 = load_csv_signage(os.getenv('CSV_SIGNAGE_02_PATH'))
     csv_signage2['shopper ID'] = None
     index_signage2 = 0
     while (index_signage2 < len(csv_signage2)) and (csv_signage2['timestamp'][index_signage2] <= start_timestamp):
@@ -166,7 +163,7 @@ def process_cam_360(cam360_queue, num_loaded_model):
                 for shelf_info in list_shelf_id:
                     shelf_data.append([1, shelf_info['local_id'], 1201, 'SHELF ID {}'.format(shelf_info['shelf_id']),
                                       csv_shelf_touch['timestamp'][shelf_info['index']],
-                                      csv_shelf_touch['timestamp (UTC - JST)'][shelf_info['index']]])
+                                      csv_shelf_touch['timestamp(UTC - JST)'][shelf_info['index']]])
                     shelf_index_data.append(shelf_info['index'])
                     # if (isinstance(shelf_info['local_id'], list)) and (len(shelf_info['local_id']) == 1): shelf_info['local_id'] = shelf_info['local_id'][0]
                     # if (isinstance(shelf_info['local_id'], list)) and (len(shelf_info['local_id']) == 0): shelf_info['local_id'] = None
@@ -276,39 +273,41 @@ def process_cam_360(cam360_queue, num_loaded_model):
                 inplace=True)
             csv_df.replace(to_replace={'shopper ID': concated_tracks}, value=track_id, inplace=True)
 
-    csv_writer.csv_data = []
+    csv_writer.csv_data = csv_df.values.tolist()
+
+    # csv_writer.csv_data = []
     for i in range(0, len(shelf_data)):
         list_local_id = shelf_data[i][1]
         if isinstance(shelf_data[i][1], int):
             list_local_id = [shelf_data[i][1]]
         list_local_id = map_local_id(list_local_id, matched_tracks, garbage_tracks)
+        if (isinstance(list_local_id, list)) and (len(list_local_id) > 1): list_local_id = str(list_local_id)
         if (isinstance(list_local_id, list)) and (len(list_local_id) == 1): list_local_id = list_local_id[0]
-        if (isinstance(list_local_id, list)) and (len(list_local_id) == 0): list_local_id = None
-        shelf_data[i][1] = str(list_local_id)
+        if (isinstance(list_local_id, list)) and (len(list_local_id) == 0): list_local_id = str(None)
+        shelf_data[i][1] = list_local_id
         csv_shelf_touch['shopper ID'][shelf_index_data[i]] = list_local_id
         csv_writer.write(shelf_data[i])
 
     for i in range(0, len(signage1_data)):
         list_local_id = map_local_id(signage1_data[i][1], matched_tracks, garbage_tracks)
+        if (isinstance(list_local_id, list)) and (len(list_local_id) > 1): list_local_id = str(list_local_id)
         if (isinstance(list_local_id, list)) and (len(list_local_id) == 1): list_local_id = list_local_id[0]
-        if (isinstance(list_local_id, list)) and (len(list_local_id) == 0): list_local_id = None
-        signage1_data[i][1] = str(list_local_id)
+        if (isinstance(list_local_id, list)) and (len(list_local_id) == 0): list_local_id = str(None)
+        signage1_data[i][1] = list_local_id
         csv_signage1['shopper ID'][signage1_index_data[i]] = list_local_id
         csv_writer.write(signage1_data[i])
 
 
     for i in range(0, len(signage2_data)):
         list_local_id = map_local_id(signage2_data[i][1], matched_tracks, garbage_tracks)
+        if (isinstance(list_local_id, list)) and (len(list_local_id) > 1): list_local_id = str(list_local_id)
         if (isinstance(list_local_id, list)) and (len(list_local_id) == 1): list_local_id = list_local_id[0]
-        if (isinstance(list_local_id, list)) and (len(list_local_id) == 0): list_local_id = None
-        signage2_data[i][1] = str(list_local_id)
+        if (isinstance(list_local_id, list)) and (len(list_local_id) == 0): list_local_id = str(None)
+        signage2_data[i][1] = list_local_id
         csv_signage2['shopper ID'][signage2_index_data[i]] = list_local_id
         csv_writer.write(signage2_data[i])
 
-    second_csv_df = pd.DataFrame(csv_writer.csv_data, columns=csv_writer.column_name)
-    csv_df = csv_df.append(second_csv_df)
-
-    to_csv(csv_path=os.getenv('CSV_CAM_360'), sep=',', index_label='ID', sort_column=['shopper ID', 'timestamp (unix timestamp)'], csv_df=csv_df)
+    csv_writer.to_csv(sep=',', index_label='ID', sort_column=['shopper ID', 'timestamp (unix timestamp)'])
     csv_shelf_touch.to_csv(os.getenv('CSV_CAM_SHELF'), index=False)
     csv_signage1.to_csv(os.getenv('CSV_CAM_SIGNAGE_01'), index=False)
     csv_signage2.to_csv(os.getenv('CSV_CAM_SIGNAGE_02'), index=False)

@@ -146,7 +146,7 @@ def filter_by_timestamp(csv_df, query_timestamp, info):
     return res.drop_duplicates(subset=['shopper ID'], keep='last')
 
 def load_csv(path, col=None):
-    return pd.read_csv(path, usecols=col).rename(columns={'timestamp (unix timestamp) ': 'timestamp'})
+    return pd.read_csv(path, usecols=col)
 
 def load_csv_signage(path):
     csv_signage_df = pd.read_csv(path, parse_dates=[-4], date_parser=lambda x: pd.datetime.strptime(x, '%Y-%m-%d %H:%M:%S.%f'))
@@ -208,3 +208,5 @@ def update_camera_id(filename):
         os.environ['SIGNAGE_ID']='2'
     else:
         os.environ['SIGNAGE_ID']='1'
+
+    return int(os.environ['SIGNAGE_ID'])
