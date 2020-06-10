@@ -2,8 +2,6 @@
 from detectron2.engine import DefaultPredictor
 from detectron2.config import get_cfg
 from .DetectorBase import DetectorBase
-import numpy as np
-import cv2
 import torch
 
 from .utils.nms import nms

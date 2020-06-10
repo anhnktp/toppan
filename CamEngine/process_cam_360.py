@@ -13,7 +13,7 @@ from modules.PostProcessing import TrackManager
 from modules.Vectorization import Vectorizer
 from helpers.settings import *
 from helpers.time_utils import get_timestamp_from_filename, convert_timestamp_to_human_time
-from helpers.common_utils import CSV_Writer, draw_polygon, load_csv, map_id_shelf, map_id_signage, load_csv_signage, map_local_id
+from helpers.common_utils import CSV_Writer, draw_polygon, load_csv, map_id_shelf, combine_signages_to_fisheye, to_csv, load_csv_signage, map_local_id
 
 import pandas as pd
 
@@ -60,8 +60,7 @@ def process_cam_360(cam360_queue, num_loaded_model):
     detector.setROI(roi_x1y1, roi_x2y2)
 
     # Create instance of Tracker
-    tracker = Tracker(int(os.getenv('MAX_AGE')), int(os.getenv('MIN_HITS')), float(os.getenv('LOW_IOU_THRESHOLD')),
-                      float(os.getenv('MIN_DIST_PPL')), int(os.getenv('MIN_FREQ_PPL')))
+    tracker = Tracker(int(os.getenv('MAX_AGE')), int(os.getenv('MIN_HITS')), float(os.getenv('LOW_IOU_THRESHOLD')))
 
     # Create instance of EventDetector
     event_detector = EventDetector(int(os.getenv('MIN_BASKET_FREQ')))
@@ -91,23 +90,16 @@ def process_cam_360(cam360_queue, num_loaded_model):
     csv_shelf_touch = load_csv(os.getenv('CSV_TOUCH_SHELF_PATH'))
     csv_shelf_touch['shopper ID'] = None
     index_touch = 0
+    wait_frames = 0
     while (index_touch < len(csv_shelf_touch)) and (csv_shelf_touch['timestamp'][index_touch] <= start_timestamp):
         index_touch += 1
 
     # Load CSV signage to combine
-    csv_signage1 = load_csv_signage(os.getenv('CSV_SIGNAGE_01_PATH'))
-    csv_signage1['shopper ID'] = None
-    index_signage1 = 0
-    while (index_signage1 < len(csv_signage1)) and (csv_signage1['timestamp'][index_signage1] <= start_timestamp):
-        index_signage1 += 1
+    csv_signage1_path = os.getenv('PROCESSED_CSV_SIGNAGE_01_PATH')
+    signage1_df = load_csv_signage(csv_signage1_path, post_processed=True)
 
-    csv_signage2 = load_csv_signage(os.getenv('CSV_SIGNAGE_02_PATH'))
-    csv_signage2['shopper ID'] = None
-    index_signage2 = 0
-    while (index_signage2 < len(csv_signage2)) and (csv_signage2['timestamp'][index_signage2] <= start_timestamp):
-        index_signage2 += 1
-
-    wait_frames = 0
+    csv_signage2_path = os.getenv('PROCESSED_CSV_SIGNAGE_02_PATH')
+    signage2_df = load_csv_signage(csv_signage2_path, post_processed=True)
 
     # Start AI engine
     engine_logger.critical('Tracking engine has local_id start from {}'.format(1))
@@ -115,10 +107,6 @@ def process_cam_360(cam360_queue, num_loaded_model):
 
     shelf_data = []
     shelf_index_data = []
-    signage1_data = []
-    signage1_index_data = []
-    signage2_data = []
-    signage2_index_data = []
 
     while vid.isOpened():
         # if (num_loaded_model.value < num_model) or (cam360_queue.qsize() <= 0):
@@ -137,10 +125,11 @@ def process_cam_360(cam360_queue, num_loaded_model):
 
         # Get Tracking result
         tracker.setTimestamp(cur_time)
-        trackers, localIDs_end = tracker.update(dets, basket_dets, in_door_area, out_door_area, shelf_a_area, shelf_b_area, none_area)
+        trackers, localIDs_end = tracker.update(dets, basket_dets, in_door_area, out_door_area, shelf_a_area,
+                                                shelf_b_area, none_area, signage1_area, signage2_area)
 
         # Update event detection results
-        event_detector.update(trackers, localIDs_end, csv_writer)
+        event_detector.update_fish_eye(trackers, localIDs_end, csv_writer)
 
         # Update track_manger
         track_manager.update(img_ori, trackers)
@@ -165,62 +154,14 @@ def process_cam_360(cam360_queue, num_loaded_model):
                                       csv_shelf_touch['timestamp'][shelf_info['index']],
                                       csv_shelf_touch['timestamp(UTC - JST)'][shelf_info['index']]])
                     shelf_index_data.append(shelf_info['index'])
-                    # if (isinstance(shelf_info['local_id'], list)) and (len(shelf_info['local_id']) == 1): shelf_info['local_id'] = shelf_info['local_id'][0]
-                    # if (isinstance(shelf_info['local_id'], list)) and (len(shelf_info['local_id']) == 0): shelf_info['local_id'] = None
-                    # csv_shelf_touch['shopper ID'][shelf_info['index']] = shelf_info['local_id']
-                    # csv_writer.write((1, str(shelf_info['local_id']), 1201, 'SHELF ID {}'.format(shelf_info['shelf_id']),
-                    #                   csv_shelf_touch['timestamp'][shelf_info['index']],
-                    #                   csv_shelf_touch['timestamp (UTC - JST)'][shelf_info['index']]))
                 index_touch += 1
                 wait_frames = 0
             else: wait_frames += 1
 
-        # Combine signage CSV
-        if (index_signage1 < len(csv_signage1)) and (csv_signage1['timestamp'][index_signage1] <= cur_time):
-            print('start map local_id to signage 1')
-            # filter list local_id within signage1_area (FOV)
-            local_id_signage = map_id_signage(trackers, signage1_area)
-            time_has_attention = csv_signage1['Duration'][index_signage1].split(':')
-            duration = float(time_has_attention[2]) + float(time_has_attention[3]) / 1000
-            csv_signage1['Duration'][index_signage1] = '{}s'.format(duration)
-            signage1_data.append([1, local_id_signage, 1517, 'HAS ATTENTION TO SIGNAGE1 IN {}s'.format(duration),
-                              csv_signage1['timestamp'][index_signage1],
-                              csv_signage1['Timestamp (UTC-JST)'][index_signage1]])
-            signage1_index_data.append(index_signage1)
-
-            # if (isinstance(local_id_signage, list)) and (len(local_id_signage) == 1): local_id_signage = local_id_signage[0]
-            # if (isinstance(local_id_signage, list)) and (len(local_id_signage) == 0): local_id_signage = None
-            # csv_signage1['shopper ID'][index_signage1] = str(local_id_signage)
-            # csv_writer.write((1, str(local_id_signage), 1517, 'HAS ATTENTION TO SIGNAGE1 IN {}s'.format(duration),
-            #                   csv_signage1['timestamp'][index_signage1],
-            #                   csv_signage1['Timestamp (UTC-JST)'][index_signage1]))
-            index_signage1 += 1
-
-        if (index_signage2 < len(csv_signage2)) and (csv_signage2['timestamp'][index_signage2] <= cur_time):
-            print('start map local_id to signage 2')
-            # filter list local_id within signage2_area (FOV)
-            local_id_signage = map_id_signage(trackers, signage2_area)
-            time_has_attention = csv_signage2['Duration'][index_signage2].split(':')
-            duration = float(time_has_attention[2]) + float(time_has_attention[3]) / 1000
-            csv_signage2['Duration'][index_signage2] = '{}s'.format(duration)
-            signage2_data.append([2, local_id_signage, 1517, 'HAS ATTENTION TO SIGNAGE2 IN {}s'.format(duration),
-                              csv_signage2['timestamp'][index_signage2],
-                              csv_signage2['Timestamp (UTC-JST)'][index_signage2]])
-            signage2_index_data.append(index_signage2)
-            # if (isinstance(local_id_signage, list)) and (len(local_id_signage) == 1): local_id_signage = local_id_signage[0]
-            # if (isinstance(local_id_signage, list)) and (len(local_id_signage) == 0): local_id_signage = None
-            # csv_signage2['shopper ID'][index_signage2] = str(local_id_signage)
-            # csv_writer.write((2, str(local_id_signage), 1517, 'HAS ATTENTION TO SIGNAGE2 IN {}s'.format(duration),
-            #                   csv_signage2['timestamp'][index_signage2],
-            #                   csv_signage2['Timestamp (UTC-JST)'][index_signage2]))
-            index_signage2 += 1
-
-
         # Visualization: plot bounding boxes & trajectories
         # draw_polygon(img_ori, ast.literal_eval(os.getenv('SIGNAGE2_AREA')))
         # draw_polygon(img_ori, ast.literal_eval(os.getenv('SIGNAGE1_AREA')))
-        # draw_polygon(img_ori, ast.literal_eval(os.getenv('OUT_DOOR_AREA')))
-        visualizer.draw(img_ori, basket_dets, trackers, event_detector)
+        visualizer.draw_fish_eye(img_ori, basket_dets, trackers, event_detector)
 
         # Display the resulting frame
         # cv2.putText(img_ori, 'Frame #{:d} ({:.2f}ms)'.format(frame_cnt, (time.time() - start_time) * 1000), (2, 35),
@@ -228,7 +169,6 @@ def process_cam_360(cam360_queue, num_loaded_model):
         # cv2.putText(img_ori, '{}'.format(convert_timestamp_to_human_time(cur_time)), (2, 305),
         #             0, fontScale=0.6, color=(0, 255, 0), thickness=2)
         if is_show: visualizer.show(img=img_ori, title='Fish-eye camera Detection and Tracking Python Demo')
-
 
         if len(event_detector.localIDs_entered) > 0 or len(event_detector.localIDs_exited) > 0 or len(event_detector.localIDs_A) > 0 or len(event_detector.localIDs_B) > 0:
             for i in range(0, 10): videoWriter.write(img_ori)
@@ -249,17 +189,14 @@ def process_cam_360(cam360_queue, num_loaded_model):
     matched_tracks, garbage_tracks = track_manager.post_processing()
 
     # Add remaining and existing track to csv_data if end video
-    # for trk in tracker._trackers:
-    #     if trk.id < 0: continue
-    #     if trk.basket_count > int(os.getenv('MIN_BASKET_FREQ')):
-    #         csv_writer.write((1, trk.id, 1202, 'HAS BASKET', int(trk.basket_time),
-    #                     convert_timestamp_to_human_time(int(trk.basket_time))))
-    #     else:
-    #         csv_writer.write((1, trk.id, 1202, 'NO BASKET', int(trk.basket_time),
-    #                     convert_timestamp_to_human_time(int(trk.basket_time))))
-    #     ppl_accompany = np.asarray(list(trk.ppl_dist.values()))
-    #     ppl_accompany = ppl_accompany[ppl_accompany > int(os.getenv('MIN_FREQ_PPL'))]
-    #     csv_writer.write((1, trk.id, 1203, 'GROUP {} PEOPLE'.format(len(ppl_accompany) + 1), cur_time, convert_timestamp_to_human_time(cur_time)))
+    for trk in tracker._trackers:
+        if trk.id < 0: continue
+        if trk.basket_count > int(os.getenv('MIN_BASKET_FREQ')):
+            csv_writer.write((1, trk.id, 1202, 'HAS BASKET', int(trk.basket_time),
+                        convert_timestamp_to_human_time(int(trk.basket_time))))
+        else:
+            csv_writer.write((1, trk.id, 1202, 'NO BASKET', int(trk.basket_time),
+                        convert_timestamp_to_human_time(int(trk.basket_time))))
 
     # Update and output CSV file
     csv_df = pd.DataFrame(csv_writer.csv_data, columns=csv_writer.column_name)
@@ -273,9 +210,7 @@ def process_cam_360(cam360_queue, num_loaded_model):
                 inplace=True)
             csv_df.replace(to_replace={'shopper ID': concated_tracks}, value=track_id, inplace=True)
 
-    csv_writer.csv_data = csv_df.values.tolist()
-
-    # csv_writer.csv_data = []
+    csv_writer.csv_data = []
     for i in range(0, len(shelf_data)):
         list_local_id = shelf_data[i][1]
         if isinstance(shelf_data[i][1], int):
@@ -288,29 +223,13 @@ def process_cam_360(cam360_queue, num_loaded_model):
         csv_shelf_touch['shopper ID'][shelf_index_data[i]] = list_local_id
         csv_writer.write(shelf_data[i])
 
-    for i in range(0, len(signage1_data)):
-        list_local_id = map_local_id(signage1_data[i][1], matched_tracks, garbage_tracks)
-        if (isinstance(list_local_id, list)) and (len(list_local_id) > 1): list_local_id = str(list_local_id)
-        if (isinstance(list_local_id, list)) and (len(list_local_id) == 1): list_local_id = list_local_id[0]
-        if (isinstance(list_local_id, list)) and (len(list_local_id) == 0): list_local_id = str(None)
-        signage1_data[i][1] = list_local_id
-        csv_signage1['shopper ID'][signage1_index_data[i]] = list_local_id
-        csv_writer.write(signage1_data[i])
+    second_csv_df = pd.DataFrame(csv_writer.csv_data, columns=csv_writer.column_name)
+    csv_df = csv_df.append(second_csv_df)
 
-
-    for i in range(0, len(signage2_data)):
-        list_local_id = map_local_id(signage2_data[i][1], matched_tracks, garbage_tracks)
-        if (isinstance(list_local_id, list)) and (len(list_local_id) > 1): list_local_id = str(list_local_id)
-        if (isinstance(list_local_id, list)) and (len(list_local_id) == 1): list_local_id = list_local_id[0]
-        if (isinstance(list_local_id, list)) and (len(list_local_id) == 0): list_local_id = str(None)
-        signage2_data[i][1] = list_local_id
-        csv_signage2['shopper ID'][signage2_index_data[i]] = list_local_id
-        csv_writer.write(signage2_data[i])
-
-    csv_writer.to_csv(sep=',', index_label='ID', sort_column=['shopper ID', 'timestamp (unix timestamp)'])
-    csv_shelf_touch.to_csv(os.getenv('CSV_CAM_SHELF'), index=False)
-    csv_signage1.to_csv(os.getenv('CSV_CAM_SIGNAGE_01'), index=False)
-    csv_signage2.to_csv(os.getenv('CSV_CAM_SIGNAGE_02'), index=False)
+    # Perform csv combination
+    csv_df = combine_signages_to_fisheye(csv_df, signage1_df, signage2_df)
+    to_csv(csv_path=os.getenv('CSV_CAM_360'), sep=',', index_label='ID',
+           sort_column=['shopper ID', 'timestamp (unix timestamp)'], csv_df=csv_df)
 
     engine_logger.info('Created successfully CSV file of CAM_360 !')
 

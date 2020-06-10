@@ -1,12 +1,4 @@
-# Project5_ExtractReID
-
- ExactReID is a project bult on Python3.6 for a Deeplearning Tracking technology
- It features: 
-  - Person Detection for Camera at Shelf
-  - Person Detection for 360-degree camera
-  - Pose Extraction for Camera at Shelf
-  - Camera Tracking for 360-degree camera
-  - Event Notification
+# Project9 - Toppan
   
 # Setup Docker if Docker is not installed
 

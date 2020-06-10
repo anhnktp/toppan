@@ -1,5 +1,3 @@
-import os
-
 def compare_2bboxes_area(bbox1, bbox2, area_ratio_min=0.5, area_ratio_max=1.5):
     bbox1_width = max(bbox1[2] - bbox1[0], 0)
     bbox1_height = max(bbox1[3] - bbox1[1], 0)

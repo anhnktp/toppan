@@ -45,8 +45,8 @@ class PersonDetector(DetectorBase):
                 # Rescale boxes from img_size to im0 size
                 det[:, :4] = scale_coords(img.shape[2:], det[:, :4], (self.roi_x2y2[1], self.roi_x2y2[0])).round()
                 dets = det.cpu().detach().numpy()
-                person_dets = dets[dets[:, -1] == 0][:, 0:-1]
-                basket_dets = dets[dets[:, -1] == 1][:, 0:-1]
+                person_dets = dets[dets[:, -1] == 0][:, 0:-1]           # 0: person
+                basket_dets = dets[dets[:, -1] == 1][:, 0:-1]           # 1: basket or face (2 different model)
                 return person_dets, basket_dets
 
         return np.asarray(person_dets), np.asarray(basket_dets)

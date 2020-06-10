@@ -1,8 +1,6 @@
-import os
-import sys
 import cv2
 import numpy as np
-from math import cos,sin
+from math import cos, sin
 from keras import backend as K
 from modules.Detection.DetectorBase import DetectorBase
 from modules.Headpose.model import SSR_net_MT
@@ -13,7 +11,8 @@ class HeadposeDetector(DetectorBase):
     """
         Use FSA-Net Model
     """
-    def __init__(self,ckpt_path):
+
+    def __init__(self, ckpt_path):
         """ 
             Args:
                 ckpt_path: weight of model
@@ -22,7 +21,7 @@ class HeadposeDetector(DetectorBase):
         """
         super(DetectorBase, self).__init__()
         # Fixed parameters 
-        self.stage_num = [3,3,3]
+        self.stage_num = [3, 3, 3]
         self.lambda_d = 1
         self.num_classes = 3
         self.image_size = 64
@@ -38,11 +37,11 @@ class HeadposeDetector(DetectorBase):
         """
         K.clear_session()
         # make sure its testing mode
-        K.set_learning_phase(0) 
+        K.set_learning_phase(0)
 
         # Force the headpose model use CPU for computation
-        config = tf.ConfigProto(device_count = {'CPU' : 1,
-                                        'GPU' : 0})
+        config = tf.ConfigProto(device_count={'CPU': 1,
+                                              'GPU': 0})
         config.gpu_options.per_process_gpu_memory_fraction = 0.1
 
         session = tf.Session(config=config)
@@ -53,7 +52,7 @@ class HeadposeDetector(DetectorBase):
 
         return model
 
-    def getOutput(self,input_img,box):
+    def getOutput(self, input_img, box):
         '''
             Run the head pose estimation. Receive the bouding box of 1 face and 
             original image. Predict 3 angles roll, pitch, yaw.
@@ -70,14 +69,14 @@ class HeadposeDetector(DetectorBase):
 
         (startX, startY, endX, endY) = box.astype("int")
         (img_h, img_w) = input_img.shape[:2]
-        
+
         x1 = startX
         y1 = startY
         w = endX - startX
         h = endY - startY
 
-        x2 = x1+w
-        y2 = y1+h
+        x2 = x1 + w
+        y2 = y1 + h
 
         xw1 = max(int(x1 - self.ad * w), 0)
         yw1 = max(int(y1 - self.ad * h), 0)
@@ -86,21 +85,21 @@ class HeadposeDetector(DetectorBase):
 
         face = np.empty((self.image_size, self.image_size, 3))
 
-        face[:,:,:] = cv2.resize(input_img[yw1:yw2 + 1, xw1:xw2 + 1, :], (self.image_size, self.image_size))
-        face[:,:,:] = cv2.normalize(face[:,:,:], None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX)  
+        face[:, :, :] = cv2.resize(input_img[yw1:yw2 + 1, xw1:xw2 + 1, :], (self.image_size, self.image_size))
+        face[:, :, :] = cv2.normalize(face[:, :, :], None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX)
 
-        face = np.expand_dims(face[:,:,:], axis=0)  
+        face = np.expand_dims(face[:, :, :], axis=0)
 
         p_result = self.model.predict(face)
         yaw, pitch, roll = p_result[0][0], p_result[0][1], p_result[0][2]
 
-        return yaw,pitch,roll
+        return yaw, pitch, roll
 
-    def draw_axis(self,input_img, bbox, yaw, pitch, roll, ad = 0.6, tdx=None, tdy=None, size = 80):
+    def draw_axis(self, input_img, bbox, yaw, pitch, roll, ad=0.6, tdx=None, tdy=None, size=80):
         '''
-            Draw the axes for headpose estimation 
-            Yaw, Pitch, Roll 
-            Args: 
+            Draw the axes for headpose estimation
+            Yaw, Pitch, Roll
+            Args:
                 input_img: np.array
                     frame
                 bbox: list
@@ -114,14 +113,14 @@ class HeadposeDetector(DetectorBase):
         '''
         (startX, startY, endX, endY) = bbox.astype("int")
         (img_h, img_w) = input_img.shape[:2]
-        
+
         x1 = startX
         y1 = startY
         w = endX - startX
         h = endY - startY
-        
-        x2 = x1+w
-        y2 = y1+h
+
+        x2 = x1 + w
+        y2 = y1 + h
 
         # no' expand cai' bounding dox ra
         xw1 = max(int(x1 - ad * w), 0)
@@ -137,8 +136,8 @@ class HeadposeDetector(DetectorBase):
             tdx = tdx
             tdy = tdy
         else:
-            tdx = (endX - startX)/2 + startX
-            tdy = (endY - startY)/2 + startY
+            tdx = (endX - startX) / 2 + startX
+            tdy = (endY - startY) / 2 + startY
 
         # X-Axis pointing to right. drawn in red
         x1 = size * (cos(yaw) * cos(roll)) + tdx
@@ -151,11 +150,10 @@ class HeadposeDetector(DetectorBase):
         # Z-Axis (out of the screen) drawn in blue
         x3 = size * (sin(yaw)) + tdx
         y3 = size * (-cos(yaw) * sin(pitch)) + tdy
-        
-        cv2.line(input_img, (int(tdx), int(tdy)), (int(x1),int(y1)),(0,0,255),3)
-        cv2.line(input_img, (int(tdx), int(tdy)), (int(x2),int(y2)),(0,255,0),3)
-        cv2.line(input_img, (int(tdx), int(tdy)), (int(x3),int(y3)),(255,0,0),3)
- 
-    def print_model(self):
-        print (self.model.summary()) 
 
+        cv2.line(input_img, (int(tdx), int(tdy)), (int(x1), int(y1)), (0, 0, 255), 3)
+        cv2.line(input_img, (int(tdx), int(tdy)), (int(x2), int(y2)), (0, 255, 0), 3)
+        cv2.line(input_img, (int(tdx), int(tdy)), (int(x3), int(y3)), (255, 0, 0), 3)
+
+    def print_model(self):
+        print(self.model.summary())

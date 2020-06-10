@@ -9,7 +9,7 @@ from modules.EventDetection import EventDetector
 from modules.Visualization import Visualizer
 from helpers.settings import *
 from helpers.time_utils import get_timestamp_from_filename, convert_timestamp_to_human_time
-from helpers.common_utils import CSV_Writer, draw_polygon, load_csv, map_id_shelf, calculate_duration, update_camera_id
+from helpers.common_utils import CSV_Writer, draw_polygon, post_processing_signage_csv, calculate_duration, update_camera_id
 from modules.Headpose.Detector_headpose import HeadposeDetector
 
 
@@ -26,14 +26,14 @@ def process_cam_signage(cam_signage_queue, num_loaded_model):
 
     # Create video writer
     if os.getenv('SAVE_VID') == 'TRUE':
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        fourcc = cv2.VideoWriter_fourcc(*'H264')
         vid_path = join(os.getenv('OUTPUT_DIR'), 'CAM_SIGNAGE_{:02}.mp4'.format(cam_id))
-        videoWriter = cv2.VideoWriter(vid_path, fourcc, int(os.getenv('FPS_CAM_360')), img_size_cam_signage)
+        videoWriter = cv2.VideoWriter(vid_path, fourcc, int(os.getenv('FPS_CAM_SIGNAGE')), img_size_cam_signage)
 
     # Create list to store data in csv
-
     column_name = ['camera ID', 'shopper ID', 'process ID', 'info', 'Start_time',
-                   'End_time','Duration(s)']
+                   'End_time', 'Duration(s)', 'Start_bbox_xmin', 'Start_bbox_xmax', 'End_bbox_xmin',
+                   'End_bbox_xmax']
     csv_writer = CSV_Writer(column_name, os.getenv('CSV_CAM_SIGNAGE_{:02}'.format(cam_id)))
 
     # Create instance of Visualizer
@@ -86,20 +86,21 @@ def process_cam_signage(cam_signage_queue, num_loaded_model):
         # Get Tracking result
         tracker.setTimestamp(cur_time)
 
-        # local_IDs_end: dead tracklets , clean up the trackers 
-        trackers, localIDs_end = tracker.update(dets, faces,hpDetector,img_ori)
+        # local_IDs_end: dead tracklets , clean up the trackers
+        trackers, localIDs_end = tracker.update(dets, faces, hpDetector, img_ori)
 
         # Update event detection results
-        event_detector.update_signage(trackers, faces, localIDs_end, csv_writer)
+        event_detector.update_signage(localIDs_end, csv_writer)
 
-        visualizer.draw_signage(img_ori, faces, trackers, event_detector)
+        visualizer.draw_signage(img_ori, faces, trackers)
 
         # Display the resulting frame
         cv2.putText(img_ori, 'Frame #{:d} ({:.2f}ms)'.format(frame_cnt, (time.time() - start_time) * 1000), (2, 35),
                     0, fontScale=0.6, color=(0, 255, 0), thickness=2)
         if is_show: visualizer.show(img=img_ori, title='Fish-eye camera Detection and Tracking Python Demo')
 
-        engine_logger.info('Frame Count: {} - CAM_Signage Flow with FPS: {}'.format(frame_cnt, 1. / (time.time() - start_time)))
+        engine_logger.info(
+            'Frame Count: {} - CAM_Signage Flow with FPS: {}'.format(frame_cnt, 1. / (time.time() - start_time)))
 
         if os.getenv('SAVE_VID') == 'TRUE':
             videoWriter.write(img_ori)
@@ -117,19 +118,24 @@ def process_cam_signage(cam_signage_queue, num_loaded_model):
         ppl_accompany = np.asarray(list(trk.ppl_dist.values()))
         ppl_accompany = ppl_accompany[ppl_accompany > int(os.getenv('MIN_AREA_FREQ'))]
         # change to new format
-        duration_group = calculate_duration(trk.basket_time,cur_time)
+        duration_group = calculate_duration(trk.basket_time, cur_time)
         csv_writer.write((cam_id, trk.id, 1203, 'GROUP {} PEOPLE'.format(len(ppl_accompany) + 1),
-                                    convert_timestamp_to_human_time(trk.basket_time), 
-                                    convert_timestamp_to_human_time(cur_time),
-                                    duration_group))
+                          convert_timestamp_to_human_time(trk.basket_time), convert_timestamp_to_human_time(cur_time),
+                          duration_group,
+                          trk.sig_start_bbox[0], trk.sig_start_bbox[2],
+                          int(min(max(trk.get_state()[0][0], 0), img_size_cam_signage[0])),
+                          int(min(max(trk.get_state()[0][2], 0), img_size_cam_signage[0]))))
 
         if len(trk.duration_hp_list) != 0:
-            for start,end,duration in zip(trk.start_hp_list,trk.end_hp_list,trk.duration_hp_list):
-                csv_writer.write((cam_id,trk.id,1557,'has_attention',convert_timestamp_to_human_time(start),
-                                                                convert_timestamp_to_human_time(end),duration))
+            for start, end, duration in zip(trk.start_hp_list, trk.end_hp_list, trk.duration_hp_list):
+                csv_writer.write((cam_id, trk.id, 1557, 'has_attention', convert_timestamp_to_human_time(start),
+                                  convert_timestamp_to_human_time(end), duration, None, None, None, None))
 
     csv_writer.to_csv(sep=',', index_label='ID', sort_column=['shopper ID'])
 
+    # Post Processing Camera Signage
+    post_processing_signage_csv(input_csv=os.getenv('CSV_CAM_SIGNAGE_{:02}'.format(cam_id)),
+                                output_csv=os.getenv('PROCESSED_CSV_SIGNAGE_{:02}_PATH'.format(cam_id)))
     engine_logger.info('Created successfully CSV file of CAM_Signage !')
 
-    engine_logger.critical('------ CAM_Signage Engine process stopped ------') 
+    engine_logger.critical('------ CAM_Signage Engine process stopped ------')

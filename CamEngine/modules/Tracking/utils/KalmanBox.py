@@ -42,13 +42,20 @@ class KalmanBoxTracker(object):
         # self.age = 0
 
         self.attention = False
-        self.start_hp_time = None # start headpose timestamp
-        self.end_hp_time = None # end headpose timestamp
-        self.hp_max_age = 0 
+        self.start_hp_time = None  # start headpose timestamp
+        self.end_hp_time = None  # end headpose timestamp
+        self.hp_max_age = 0
         self.cnt_frame_attention = 0
         self.duration_hp_list = []
         self.start_hp_list = []
         self.end_hp_list = []
+
+        self.sig1_start_time = None
+        self.sig1_end_time = None
+        self.sig2_start_time = None
+        self.sig2_end_time = None
+
+        self.sig_start_bbox = bbox[:4]
  
     def update(self, bbox, min_hits):
         """

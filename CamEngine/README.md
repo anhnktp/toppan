@@ -1,9 +1,9 @@
-# Project5
-Project 5 - Exact ReID
+# Project9
+Project 9 - Toppan
 # Run main.py
 ```
 ```bash
-conda activate proj5
+conda activate <myenv>
 cd CamEngine
 python main.py  
 ```

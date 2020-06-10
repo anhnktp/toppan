@@ -13,7 +13,7 @@ class Visualizer(object):
         # TRAJECT_QUEUE_SIZE buffer is the maximum size of plot deque
         self.pts = deque(maxlen=TRAJECT_QUEUE_SIZE)
 
-    def draw(self, img, basket_dets, trackers, event_detector):
+    def draw_fish_eye(self, img, basket_dets, trackers, event_detector):
         plot_bbox(img, basket_dets, colours=self.colours, show_label=False)
         plot_bbox(img, trackers, colours=self.colours, show_label=True)
         plot_tracjectories(img, pts=self.pts, trackers=trackers, colours=self.colours)
@@ -31,7 +31,7 @@ class Visualizer(object):
             cv2.putText(img, 'B:{}'.format(", ".join(map(str, event_detector.localIDs_B))), (2, 115), 0, fontScale=0.6,
                         color=(0, 0, 255), thickness=2)
 
-    def draw_signage(self, img, faces, trackers, event_detector):
+    def draw_signage(self, img, faces, trackers):
         plot_bbox(img, faces, colours=self.colours, show_label=False)
         plot_bbox(img, trackers, colours=self.colours, show_label=True)
         plot_tracjectories(img, pts=self.pts, trackers=trackers, colours=self.colours)
@@ -65,7 +65,7 @@ def plot_bbox(img, bboxes, colours, show_label=True):
 def plot_tracjectories(img, pts, trackers, colours):
     centers = []
     for d in trackers:
-        if d[-1] < 0: continue
+        if d[-1] < 1: continue
         centers.append((int((d[0] + d[2]) / 2), int((d[1] + d[3]) / 2), int(d[-1])))
     pts.appendleft(centers)
 
