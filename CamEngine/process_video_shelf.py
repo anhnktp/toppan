@@ -25,7 +25,7 @@ from modules.Detection.Detector_hand import HandDetector
 from modules.Visualization import HandVisualizer
 
 from modules.Detection.hand import HandCenter, track_hands
-
+from helpers.common_utils import CSV_Writer
 
 def get_start_time(video_fname, cam_type):
     try:
@@ -37,7 +37,7 @@ def get_start_time(video_fname, cam_type):
 
     return start_time
 
-def process_cam_shelf(camShelf_queue, cam_type, num_loaded_model, global_tracks):
+def process_cam_shelf(camShelf_queue, cam_type, num_loaded_model, global_tracks, n):
     engine_logger.critical('------ {} flow process started ------'.format(cam_type))
     
     video_base_dir = os.getenv('VIDEO_BASE_DIR')
@@ -46,7 +46,7 @@ def process_cam_shelf(camShelf_queue, cam_type, num_loaded_model, global_tracks)
     save_base_dir = os.path.join(save_base_dir, exp_name, 'test_cases')
     cases = ['case{}'.format(str(i+1).zfill(2)) for i in range(25)]
 
-    case = cases[-2]
+    case = cases[n]
 
     case_dir = os.path.join(video_base_dir, case)
     case_save_dir = os.path.join(save_base_dir, case)
@@ -99,6 +99,11 @@ def process_cam_shelf(camShelf_queue, cam_type, num_loaded_model, global_tracks)
     # Get start timestamp on video
     start_time = get_start_time(os.path.basename(video_input), cam_type)
 
+    handTracker = {}
+    setHandId = set()
+
+    new_shelves_hand_touched_list = []
+
     while vid.isOpened():
         grabbed, img = vid.read()
         if not grabbed: break
@@ -108,23 +113,59 @@ def process_cam_shelf(camShelf_queue, cam_type, num_loaded_model, global_tracks)
         # Get detection results
         frame = img[roi_x1y1[1]:roi_x2y2[1], roi_x1y1[0]:roi_x2y2[0]]
         detector.setFrame(frame)
-        hands = detector.getOutput()
+        hands = detector.getOutput(cur_time)
 
         ### Simple hand tracker refering to lightweight openpose
-        current_hand_centers = []
+        # current_hand_centers = []
+        # for hand in hands:
+        #     hand_center = hand[-1]
+        #     confidence = hand[-2]
+        #     # handcenter object
+        #     hc = HandCenter(hand_center, confidence)
+        #     current_hand_centers.append(hc)
+        #
+        # track_hands(previous_hands_center, current_hand_centers)
+        # previous_hands_center = current_hand_centers
+        # for hc in current_hand_centers:
+        #     cv2.putText(img, 'id: {}'.format(hc.id), hc.hand_center,
+        #                     cv2.FONT_HERSHEY_COMPLEX, 0.5, (0, 0, 255))
+        ### Simple hand tracker refering t so lightweight openpose
+
+        ### Calculate hand velocity
+        current_hand_center = []
+
         for hand in hands:
-            hand_center = hand[-1] 
-            confidence = hand[-2]
-            # handcenter object
-            hc = HandCenter(hand_center, confidence)
-            current_hand_centers.append(hc)
+            hand_center = hand[-1]
+            hand_id = hand[-3]
+            hand_time = hand[-2]
+            setHandId.add(hand_id)
+            for id in setHandId:
+                if id not in handTracker.keys():
+                    handTracker[id] = []
+                if id == hand_id:
+                    if len(handTracker[id]) > 1:
+                        handTracker[id].pop(0)
+                    handTracker[id].append([hand_center, hand_time])
 
-        track_hands(previous_hands_center, current_hand_centers)
-        previous_hands_center = current_hand_centers
-        for hc in current_hand_centers:
-            cv2.putText(img, 'id: {}'.format(hc.id), hc.hand_center,
-                            cv2.FONT_HERSHEY_COMPLEX, 0.5, (0, 0, 255))
-        ### Simple hand tracker refering to lightweight openpose
+                    if len(handTracker[id]) == 2:
+                        try:
+                            c1 = handTracker[hand_id][0][0]
+                            c2 = handTracker[hand_id][1][0]
+                            deltaT = handTracker[hand_id][1][1] - handTracker[hand_id][0][1]
+                            velo = (np.linalg.norm(np.array(c1) - np.array(c2)))/deltaT
+                            vx = (c2[0] - c1[0])/deltaT
+                            vy = (c2[1] - c1[1])/deltaT
+                            delta = min(hand[2]-hand[0], hand[3]-hand[1])
+                            xc = int(hand[-1][0] + delta*0.3*(vx/abs(vx))*(abs(vx)/velo))
+                            yc = int(hand[-1][1] - delta*0.3*(abs(vy)/velo))
+                            hand.insert(6, vx)
+                            hand.insert(7, vy)
+                            hand.insert(8, velo)
+                            hand[-1] = (xc, yc)
+                            # hand: [xmin, ymin, xmax, ymax, id, time, vx, vy, velo, (xc,yc)]
+                            cv2.putText(frame, str(int(velo)) + '_vx'+ str(int(vx)) + '_vy' + str(int(vy)), (c2[0]-50, c2[1]+50) , cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 1)
+                        except:
+                            print('unable to calculate hand velocity')
 
         trackers = []
         # Shelf touch detection
@@ -137,8 +178,13 @@ def process_cam_shelf(camShelf_queue, cam_type, num_loaded_model, global_tracks)
 
         if len(new_shelves_hand_touched) > 0:
             h_time = convert_timestamp_to_human_time(cur_time)
-            print(new_shelves_hand_touched, h_time)
-
+            #print(new_shelves_hand_touched, h_time)
+            shelves = []
+            for new_shelves_hand in new_shelves_hand_touched:
+                new_shelves_hand = list(new_shelves_hand)
+                new_shelves_hand.append(h_time)
+                shelves.append(new_shelves_hand)
+            new_shelves_hand_touched_list.append(shelves)
         # Visualize handboxes
         vis.draw_boxes(hands, frame)
 
@@ -146,19 +192,58 @@ def process_cam_shelf(camShelf_queue, cam_type, num_loaded_model, global_tracks)
         draw_shelves_polygon(frame, shelves_info)
 
         vw.write(frame)
-
-
+    print(new_shelves_hand_touched_list)
+    return new_shelves_hand_touched_list
     vid.release()
     vw.release()
+
+def merge_csv (rets1, rets2, csv_path):
+    rets1_t = []
+    for ret in rets1:
+        try:
+            ret = (1, ret[0][0], ret[0][1], ret[0][2], ret[0][3], ret[0][4])
+            rets1_t.append(ret)
+        except:
+            print('a')
+    rets2_t = []
+    for ret in rets2:
+        try:
+            ret = (2, ret[0][0], ret[0][1], ret[0][2], ret[0][3], ret[0][4])
+            rets2_t.append(ret)
+        except:
+            print('b')
+    rets = rets1_t
+    rets.extend(rets2_t)
+    rets.sort(key=lambda tup: tup[4])
+
+    column_name = ['camera ID', 'shelf ID', 'hand_id', 'hand_coords', 'timestamp', 'timestamp(UTC - JST)']
+    csv_writer = CSV_Writer(column_name, csv_path)
+    for ret in rets:
+        csv_writer.write(ret)
+    csv_writer.to_csv()
 
 
 if __name__ == '__main__':
     camShelf_queue = []
-    cam_type = 'CAM_SHELF_02'
+    cam_type1 = 'CAM_SHELF_01'
+    cam_type2 = 'CAM_SHELF_02'
     num_loaded_model = 1
     global_tracks = []
-    
-    process_cam_shelf(camShelf_queue, cam_type, num_loaded_model, global_tracks)
+
+    for i in range(24,25):
+        rets1 = process_cam_shelf(camShelf_queue, cam_type1, num_loaded_model, global_tracks, i)
+        rets2 = process_cam_shelf(camShelf_queue, cam_type2, num_loaded_model, global_tracks, i)
+
+        path = 'CSV/' + 'case{}'.format(str(i+1).zfill(2)) + '.csv'
+        try:
+            merge_csv(rets1, rets2, path)
+        except:
+            print('unable to merge')
+
+
+
+
+
 
 
 
