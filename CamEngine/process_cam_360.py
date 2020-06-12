@@ -224,13 +224,13 @@ def process_cam_360(cam360_queue, num_loaded_model):
         csv_writer.write(shelf_data[i])
 
     second_csv_df = pd.DataFrame(csv_writer.csv_data, columns=csv_writer.column_name)
-    csv_df = csv_df.append(second_csv_df)
+    csv_df = csv_df.append(second_csv_df, ignore_index=True)
 
     # Perform csv combination
     csv_df = combine_signages_to_fisheye(csv_df, signage1_df, signage2_df)
     to_csv(csv_path=os.getenv('CSV_CAM_360'), sep=',', index_label='ID',
            sort_column=['shopper ID', 'timestamp (unix timestamp)'], csv_df=csv_df)
-
+    csv_shelf_touch.to_csv(os.getenv('CSV_CAM_SHELF'), index=False)
     engine_logger.info('Created successfully CSV file of CAM_360 !')
 
     engine_logger.critical('------ CAM_360 Engine process stopped ------')

@@ -33,7 +33,7 @@ class TrackManager(object):
                 track.extract_features(self._vectorizer)
 
         # Start matching
-        tracks = sorted(self.get_tracks().values(), key=lambda t: t.end_time)
+        tracks = sorted(self.get_tracks().values(), key=lambda t: t.start_time)
         # tracks = sorted(self.get_tracks().values(), key=lambda t: t.end_time)
         if self._vectorizer:
             # Matching by vectorization

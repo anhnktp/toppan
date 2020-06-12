@@ -317,7 +317,6 @@ def combine_signages_to_fisheye(fisheye_df, signage1_df, signage2_df, iou_thresh
 
     fisheye_sig1_tracks = []
     fisheye_sig2_tracks = []
-
     for identity in unique_fisheye_ids:
         enter_sig1_df = fisheye_df.loc[
             fisheye_df['info'].str.contains('ENTER SIGNAGE 1') & (fisheye_df['shopper ID'] == identity)]
