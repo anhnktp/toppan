@@ -13,8 +13,8 @@ class HandActionRecognition(ActionBase):
     def __init__(self, cam_type):
         super(HandActionRecognition, self).__init__(cam_type)
         self.last_time_have_event = None
-        self.d_thresh = 100
-        self.t_thresh = 1.5
+        self.d_thresh = 140
+        self.t_thresh = 2
 
     def detect_action(self, old_state, hands, trackers, item_boxes):
         shelf_ids_before = []
@@ -40,6 +40,7 @@ class HandActionRecognition(ActionBase):
                             d = np.linalg.norm(np.array(center) - np.array(center_b4))
                             distances.append(d)
                             delt_ts.append(t-t_b4)
+                            delt_ids.append(hand_id-hand_id_b4)
                         else:
                             if hand_id == hand_id_b4:
                                 if (t - t_b4) > self.t_thresh:
@@ -47,8 +48,8 @@ class HandActionRecognition(ActionBase):
 
                     if len(distances) > 0:
                         is_update = True
-                        for distance, delt_t in zip(distances, delt_ts):
-                            if distance < self.d_thresh or delt_t < self.t_thresh:
+                        for distance, delt_t, delt_id in zip(distances, delt_ts, delt_ids):
+                            if (distance < self.d_thresh or delt_t < self.t_thresh) and delt_id==0:
                                 is_update = False
 
                         if is_update:

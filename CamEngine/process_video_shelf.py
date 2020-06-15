@@ -27,6 +27,7 @@ from modules.Visualization import HandVisualizer
 from modules.Detection.hand import HandCenter, track_hands
 from helpers.common_utils import CSV_Writer
 
+
 def get_start_time(video_fname, cam_type):
     try:
         start_time = get_timestamp_from_filename(video_fname, cam_type)
@@ -37,14 +38,15 @@ def get_start_time(video_fname, cam_type):
 
     return start_time
 
+
 def process_cam_shelf(camShelf_queue, cam_type, num_loaded_model, global_tracks, n):
     engine_logger.critical('------ {} flow process started ------'.format(cam_type))
-    
+
     video_base_dir = os.getenv('VIDEO_BASE_DIR')
     save_base_dir = os.getenv('SAVE_BASE_DIR')
     exp_name = 'separate'
     save_base_dir = os.path.join(save_base_dir, exp_name, 'test_cases')
-    cases = ['case{}'.format(str(i+1).zfill(2)) for i in range(25)]
+    cases = ['case{}'.format(str(i + 1).zfill(2)) for i in range(25)]
 
     case = cases[n]
 
@@ -57,18 +59,18 @@ def process_cam_shelf(camShelf_queue, cam_type, num_loaded_model, global_tracks,
     # fnames = [os.path.join(case_dir, f'{case}.{ext}') for ext in ['mp4', 'csv']]
     # map(remove_file, fnames)
 
-    videos_input = glob.glob(case_dir+ '/*.mp4')
+    videos_input = glob.glob(case_dir + '/*.mp4')
     videos_input.sort()
 
     if cam_type == 'CAM_SHELF_01':
         shelves_info = get_shelves_loc(os.getenv('CAM_SHELF_01_POLYGONS_ANNO_FILE'))
         # videos_input[0]: Take the 01_area1_shelf_right*.mp4
-        video_input = videos_input[0] 
+        video_input = videos_input[0]
     else:
         shelves_info = get_shelves_loc(os.getenv('CAM_SHELF_02_POLYGONS_ANNO_FILE'))
-        video_input = videos_input[1] 
+        video_input = videos_input[1]
     item_boxes = shelves_info['shelf_dict']
-    
+
     vid = cv2.VideoCapture(video_input)
     width, height, fps, num_frames = get_vid_properties(vid)
 
@@ -80,7 +82,7 @@ def process_cam_shelf(camShelf_queue, cam_type, num_loaded_model, global_tracks,
 
     # Hand detector
     detector = HandDetector(os.getenv('HAND_CFG_PATH'),
-                            os.getenv('HAND_MODEL_PATH'), 
+                            os.getenv('HAND_MODEL_PATH'),
                             os.getenv('CAM_SHELF_GPU'),
                             os.getenv('HAND_SCORE_THRESHOLD'),
                             os.getenv('HAND_NMS_THRESHOLD'),
@@ -94,17 +96,20 @@ def process_cam_shelf(camShelf_queue, cam_type, num_loaded_model, global_tracks,
 
     previous_hands_center = []
     old_state = []
-    max_age = 10
+    max_age = 13
 
     # Get start timestamp on video
     start_time = get_start_time(os.path.basename(video_input), cam_type)
 
     handTracker = {}
+    VelHandTracker = {}
     setHandId = set()
 
     new_shelves_hand_touched_list = []
 
+    mean_time = 0
     while vid.isOpened():
+        current_time = cv2.getTickCount()
         grabbed, img = vid.read()
         if not grabbed: break
 
@@ -152,18 +157,40 @@ def process_cam_shelf(camShelf_queue, cam_type, num_loaded_model, global_tracks,
                             c1 = handTracker[hand_id][0][0]
                             c2 = handTracker[hand_id][1][0]
                             deltaT = handTracker[hand_id][1][1] - handTracker[hand_id][0][1]
-                            velo = (np.linalg.norm(np.array(c1) - np.array(c2)))/deltaT
-                            vx = (c2[0] - c1[0])/deltaT
-                            vy = (c2[1] - c1[1])/deltaT
-                            delta = min(hand[2]-hand[0], hand[3]-hand[1])
-                            xc = int(hand[-1][0] + delta*0.3*(vx/abs(vx))*(abs(vx)/velo))
-                            yc = int(hand[-1][1] - delta*0.3*(abs(vy)/velo))
+                            velo = (np.linalg.norm(np.array(c1) - np.array(c2))) / deltaT
+                            vx = (c2[0] - c1[0]) / deltaT
+                            vy = (c2[1] - c1[1]) / deltaT
+                            # if id not in VelHandTracker.keys():
+                            #     VelHandTracker[id] = []
+                            # if len(VelHandTracker[id]) > 1:
+                            #     VelHandTracker[id].pop(0)
+                            # VelHandTracker[id].append([vx, vy])
+                            # print(f'velocity is {VelHandTracker[id]}')
+                            # if len(VelHandTracker[id]) == 2:
+                            #     try:
+                            #         vx2 = VelHandTracker[id][0][0] * VelHandTracker[id][1][0]
+                            #         print(f'vx2 is {vx2}')
+                            #         vy2 = VelHandTracker[id][0][1] * VelHandTracker[id][1][1]
+                            #         print(f'vy2 is {vy2}')
+                            #     except:
+                            #         print('unable to calcualte v2')
+                            delta = min(hand[2] - hand[0], hand[3] - hand[1])
+                            # xc = int(hand[-1][0] + delta*0.3*(vx/abs(vx))*(abs(vx)/velo))
+                            # yc = int(hand[-1][1] - delta*0.3*(abs(vy)/velo))
                             hand.insert(6, vx)
                             hand.insert(7, vy)
                             hand.insert(8, velo)
+                            #hand.insert(9, vx2)
+                            #hand.insert(10, vy2)
+                            width = hand[2] - hand[0]
+                            height = hand[3] - hand[1]
+                            xc = int(hand[-1][0] + width * 0.25 * (vx / abs(vx)))
+                            yc = int(hand[-1][1] + height * 0.25* (vy / abs(vy)))
                             hand[-1] = (xc, yc)
+
                             # hand: [xmin, ymin, xmax, ymax, id, time, vx, vy, velo, (xc,yc)]
-                            cv2.putText(frame, str(int(velo)) + '_vx'+ str(int(vx)) + '_vy' + str(int(vy)), (c2[0]-50, c2[1]+50) , cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 1)
+                            cv2.putText(frame, str(int(velo)) + '_vx' + str(int(vx)) + '_vy' + str(int(vy)),
+                                        (c2[0] - 50, c2[1] + 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 1)
                         except:
                             print('unable to calculate hand velocity')
 
@@ -178,7 +205,7 @@ def process_cam_shelf(camShelf_queue, cam_type, num_loaded_model, global_tracks,
 
         if len(new_shelves_hand_touched) > 0:
             h_time = convert_timestamp_to_human_time(cur_time)
-            #print(new_shelves_hand_touched, h_time)
+            # print(new_shelves_hand_touched, h_time)
             shelves = []
             for new_shelves_hand in new_shelves_hand_touched:
                 new_shelves_hand = list(new_shelves_hand)
@@ -190,14 +217,21 @@ def process_cam_shelf(camShelf_queue, cam_type, num_loaded_model, global_tracks,
 
         # Draw shelves' polygon
         draw_shelves_polygon(frame, shelves_info)
-
+        current_time = (cv2.getTickCount() - current_time) / cv2.getTickFrequency()
+        if mean_time == 0:
+            mean_time = current_time
+        else:
+            mean_time = mean_time * 0.95 + current_time * 0.05
+        cv2.putText(frame, 'FPS: {}'.format(int(1 / mean_time * 10) / 10),
+                    (30, 30), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0))
         vw.write(frame)
     print(new_shelves_hand_touched_list)
     return new_shelves_hand_touched_list
     vid.release()
     vw.release()
 
-def merge_csv (rets1, rets2, csv_path):
+
+def merge_csv(rets1, rets2, csv_path):
     rets1_t = []
     for ret in rets1:
         try:
@@ -230,11 +264,11 @@ if __name__ == '__main__':
     num_loaded_model = 1
     global_tracks = []
 
-    for i in range(24,25):
+    for i in range(10, 25):
         rets1 = process_cam_shelf(camShelf_queue, cam_type1, num_loaded_model, global_tracks, i)
         rets2 = process_cam_shelf(camShelf_queue, cam_type2, num_loaded_model, global_tracks, i)
 
-        path = 'CSV/' + 'case{}'.format(str(i+1).zfill(2)) + '.csv'
+        path = 'CSV/' + 'case{}'.format(str(i + 1).zfill(2)) + '.csv'
         try:
             merge_csv(rets1, rets2, path)
         except:
@@ -252,4 +286,3 @@ if __name__ == '__main__':
 
 
 
- 
