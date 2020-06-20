@@ -20,6 +20,7 @@ def count_in_shelf_area(hands, item_boxes, vthresh = 100):
         for shelf_name, item_box in item_boxes.items():
             hand_center = hand[-1]
             hand_velo = hand[-2]
+            hand_vy = hand[-3]
             #print(f'velo is {hand_velo}')
             #hand_vx2 = hand[-3]
             #hand_vy2 = hand[-2]
@@ -28,7 +29,7 @@ def count_in_shelf_area(hands, item_boxes, vthresh = 100):
             hand_id = hand[4]
             have_item_event = False
 
-            if (not have_item_event) and (hand_center is not None) and inPolygon(item_box, hand_center) and hand_velo < vthresh:
+            if (not have_item_event) and (hand_center is not None) and inPolygon(item_box, hand_center) and hand_velo < vthresh and hand_vy < 0:
                 shelf_id = int(shelf_name.split('_')[-1])
                 shelves.append((shelf_id, hand_id, hand_center, curent_time))
                 have_item_event = True
