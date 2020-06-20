@@ -23,9 +23,6 @@ class HandActionRecognition(ActionBase):
             if len(shelf_ids) > 0:
                 shelf_ids_before.extend(shelf_ids)
         
-        # if len(shelf_ids_before) > 0:     
-        #     print(f'shelf_ids_before: {shelf_ids_before}')
-        
         shelf_ids = count_in_shelf_area(hands, item_boxes)
 
         new_shelves = []
@@ -57,10 +54,5 @@ class HandActionRecognition(ActionBase):
 
         else:
             new_shelves = shelf_ids
-
-        # if len(shelf_ids) > len(shelf_ids_before):
-        #     new_shelves = list(set(shelf_ids).difference(set(shelf_ids_before)))
-
-        #     return new_shelves
 
         return new_shelves

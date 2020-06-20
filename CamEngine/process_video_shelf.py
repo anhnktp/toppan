@@ -17,11 +17,9 @@ from helpers.shelves_loc_utils import get_shelves_loc, draw_shelves_polygon
 
 from modules.DataTemplate import DataTemplate
 from modules.ActionRecognition import HandActionRecognition
-# from modules.PoseExtraction import PoseExtraction
 from helpers.time_utils import convert_to_jp_time
 from modules.EventManager import EventManager
 from modules.VMSManager import VMSManager
-#from modules.Detection.Detector_hand import HandDetector
 from modules.Detection.Detector_yolov5 import HandDetector
 from modules.Visualization import HandVisualizer
 
@@ -56,10 +54,6 @@ def process_cam_shelf(camShelf_queue, cam_type, num_loaded_model, global_tracks,
     if not os.path.exists(case_save_dir):
         os.makedirs(case_save_dir)
 
-    # Remove a file if it exists.
-    # fnames = [os.path.join(case_dir, f'{case}.{ext}') for ext in ['mp4', 'csv']]
-    # map(remove_file, fnames)
-
     videos_input = glob.glob(case_dir + '/*.mp4')
     videos_input.sort()
 
@@ -82,13 +76,6 @@ def process_cam_shelf(camShelf_queue, cam_type, num_loaded_model, global_tracks,
     vis = HandVisualizer()
 
     # Hand detector
-    # detector = HandDetector(os.getenv('HAND_CFG_PATH'),
-    #                         os.getenv('HAND_MODEL_PATH'),
-    #                         os.getenv('CAM_SHELF_GPU'),
-    #                         os.getenv('HAND_SCORE_THRESHOLD'),
-    #                         os.getenv('HAND_NMS_THRESHOLD'),
-    #                         os.getenv('HAND_BOX_AREA_THRESHOLD'))
-
     detector = HandDetector(os.getenv('CAM_SHELF_GPU'),
                             os.getenv('HAND_CFG_PATH_YOLOV5'),
                             os.getenv('HAND_MODEL_PATH_YOLOV5'))
@@ -125,23 +112,6 @@ def process_cam_shelf(camShelf_queue, cam_type, num_loaded_model, global_tracks,
         detector.setFrame(frame)
         hands = detector.getOutput(cur_time)
 
-        ### Simple hand tracker refering to lightweight openpose
-        # current_hand_centers = []
-        # for hand in hands:
-        #     hand_center = hand[-1]
-        #     confidence = hand[-2]
-        #     # handcenter object
-        #     hc = HandCenter(hand_center, confidence)
-        #     current_hand_centers.append(hc)
-        #
-        # track_hands(previous_hands_center, current_hand_centers)
-        # previous_hands_center = current_hand_centers
-        # for hc in current_hand_centers:
-        #     cv2.putText(img, 'id: {}'.format(hc.id), hc.hand_center,
-        #                     cv2.FONT_HERSHEY_COMPLEX, 0.5, (0, 0, 255))
-        ### Simple hand tracker refering t so lightweight openpose
-
-        ### Calculate hand velocity
         current_hand_center = []
 
         for hand in hands:
@@ -158,35 +128,17 @@ def process_cam_shelf(camShelf_queue, cam_type, num_loaded_model, global_tracks,
                     handTracker[id].append([hand_center, hand_time])
 
                     if len(handTracker[id]) == 2:
-                    #try:
                         c1 = handTracker[hand_id][0][0]
                         c2 = handTracker[hand_id][1][0]
                         deltaT = handTracker[hand_id][1][1] - handTracker[hand_id][0][1]
                         velo = (np.linalg.norm(np.array(c1) - np.array(c2))) / deltaT
                         vx = (c2[0] - c1[0]) / deltaT
                         vy = (c2[1] - c1[1]) / deltaT
-                        # if id not in VelHandTracker.keys():
-                        #     VelHandTracker[id] = []
-                        # if len(VelHandTracker[id]) > 1:
-                        #     VelHandTracker[id].pop(0)
-                        # VelHandTracker[id].append([vx, vy])
-                        # print(f'velocity is {VelHandTracker[id]}')
-                        # if len(VelHandTracker[id]) == 2:
-                        #     try:
-                        #         vx2 = VelHandTracker[id][0][0] * VelHandTracker[id][1][0]
-                        #         print(f'vx2 is {vx2}')
-                        #         vy2 = VelHandTracker[id][0][1] * VelHandTracker[id][1][1]
-                        #         print(f'vy2 is {vy2}')
-                        #     except:
-                        #         print('unable to calcualte v2')
+
                         delta = min(hand[2] - hand[0], hand[3] - hand[1])
-                        # xc = int(hand[-1][0] + delta*0.3*(vx/abs(vx))*(abs(vx)/velo))
-                        # yc = int(hand[-1][1] - delta*0.3*(abs(vy)/velo))
                         hand.insert(6, vx)
                         hand.insert(7, vy)
                         hand.insert(8, velo)
-                        #hand.insert(9, vx2)
-                        #hand.insert(10, vy2)
                         width = hand[2] - hand[0]
                         height = hand[3] - hand[1]
                         if vx!=0:
@@ -200,8 +152,6 @@ def process_cam_shelf(camShelf_queue, cam_type, num_loaded_model, global_tracks,
                         # hand: [xmin, ymin, xmax, ymax, id, time, vx, vy, velo, (xc,yc)]
                         cv2.putText(frame, str(int(velo)) + '_vx' + str(int(vx)) + '_vy' + str(int(vy)),
                                     (c2[0] - 50, c2[1] + 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 1)
-                        #except:
-                         #   print('unable to calculate hand velocity')
 
         trackers = []
         # Shelf touch detection
@@ -214,7 +164,6 @@ def process_cam_shelf(camShelf_queue, cam_type, num_loaded_model, global_tracks,
 
         if len(new_shelves_hand_touched) > 0:
             h_time = convert_timestamp_to_human_time(cur_time)
-            # print(new_shelves_hand_touched, h_time)
             shelves = []
             for new_shelves_hand in new_shelves_hand_touched:
                 new_shelves_hand = list(new_shelves_hand)

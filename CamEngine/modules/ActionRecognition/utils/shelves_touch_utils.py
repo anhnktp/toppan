@@ -16,16 +16,11 @@ def count_in_shelf_area(hands, item_boxes, vthresh = 100):
     shelves = []
 
     for hand in hands:
-        # shelf_1: POLYGON ((612 251, 174 402, 102 86, 513 4, 612 251))
         for shelf_name, item_box in item_boxes.items():
             hand_center = hand[-1]
             hand_velo = hand[-2]
             hand_vy = hand[-3]
-            #print(f'velo is {hand_velo}')
-            #hand_vx2 = hand[-3]
-            #hand_vy2 = hand[-2]
             curent_time = hand[-5]
-            #print(f'time is {curent_time}')
             hand_id = hand[4]
             have_item_event = False
 
