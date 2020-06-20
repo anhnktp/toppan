@@ -107,10 +107,6 @@ celerybeat-schedule
 # SageMath parsed files
 *.sage.py
 
-# Environments
-env.bak/
-venv.bak/
-
 # Spyder project settings
 .spyderproject
 .spyproject
@@ -130,3 +126,6 @@ dmypy.json
 .pyre/
 
 CamEngine/logs/
+
+*.pth
+CamEngine/models/*.pth

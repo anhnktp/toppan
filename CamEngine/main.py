@@ -3,6 +3,7 @@ from helpers.cam_data import get_engine_cams
 from helpers.settings import *
 from modules.DataLoader import DataLoader
 from process_cam_360 import process_cam_360
+from process_cam_signage import process_cam_signage
 
 
 if __name__ == '__main__':
@@ -12,9 +13,8 @@ if __name__ == '__main__':
     engine_cams = get_engine_cams()
 
     # Init engine
-    if not os.path.exists(os.getenv('CROPPED_IMAGE_FOLDER')):
-        os.mkdir(os.getenv('CROPPED_IMAGE_FOLDER'))
-        os.mkdir(os.getenv('CROPPED_IMAGE_FOLDER') + 'img')
+    if not os.path.exists(os.getenv('OUTPUT_DIR')):
+        os.mkdir(os.getenv('OUTPUT_DIR'))
 
     cam_data_loaders = []
     list_processes = []
@@ -31,7 +31,10 @@ if __name__ == '__main__':
 
     # Init & start engine process
     for cam_data_loader in cam_data_loaders:
-        p = Process(target=process_cam_360, args=(cam_data_loader.queue_frame, num_loaded_model))
+        if cam_data_loader._cam_type == 'CAM_360':
+            p = Process(target=process_cam_360, args=(cam_data_loader.queue_frame, num_loaded_model))
+        elif cam_data_loader._cam_type == 'CAM_SIGNAGE':
+            p = Process(target=process_cam_signage, args=(cam_data_loader.queue_frame, num_loaded_model))
         p.start()
         list_processes.append(p)
 

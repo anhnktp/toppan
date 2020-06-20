@@ -1,5 +1,6 @@
-# A. Setup Docker if Docker is not installed
-If you don't use Docker, skip to Setup conda environment session B
+# Project9 - Toppan
+  
+# Setup Docker if Docker is not installed
 
 ## I. Prerequisites
 
@@ -14,7 +15,7 @@ If you don't use Docker, skip to Setup conda environment session B
 ### Software requirements
 
 - NVIDIA Graphics Driver 430
-- Docker, docker-compose and nvdia-docker2 (only if you want to use Docker)
+- Docker, docker-compose and nvdia-docker2
 
 ## II. Setup Instructions for Host Machine
 
@@ -96,7 +97,7 @@ sudo reboot
 - Setup to show GUI tracking 360 cam (X11 forwarding mode)
 
     - Modify [.env](.env) file
-        - SHOW_GUI_360=True
+        - SHOW_GUI=True
 
     - Setup X11
 
@@ -119,16 +120,3 @@ $ docker-compose up --build
 # Removes docker out of X server ACL if you are not working with
 $ xhost - local:docker
  ~~~
-# B. Setup Conda environment
-
-Install conda (or miniconda) from this link:
-https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html
-
-## Create env
-
-```
-conda env create -f ./CamEngine/environment.yml
-```
-
-## Test building environment successfully
-Continue update ...

@@ -1,0 +1,12 @@
+_BASE_: "Base-RCNN-FPN.yaml"
+MODEL:
+  WEIGHTS: "detectron2://ImageNetPretrained/MSRA/R-50.pkl"
+  MASK_ON: False
+  RESNETS:
+    DEPTH: 50
+  ROI_HEADS:
+    NUM_CLASSES: 1
+DATASETS:
+  TRAIN: ("cocohandBig_train", "cocohandBig_val", "cocohandBig_test", "oxfordhand_train", "oxfordhand_val", "egohand_train", "egohand_val", "tvhand_train", "tvhand_val")
+  TEST: ("egohand_test", "oxfordhand_test", "tvhand_test")
+OUTPUT_DIR: "checkpoints_hand/faster_rcnn_R_50_FPN_1x"
