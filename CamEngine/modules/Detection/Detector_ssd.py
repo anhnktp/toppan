@@ -80,8 +80,7 @@ class Detector(DetectorBase):
         """
 
         _img = self.frame['data']
-        person_dets = []
-        basket_dets = []
+        dets = []
         with self.detection_graph.as_default():
             # Acquire frame and expand frame dimensions to have shape: [1, None, None, 3]
             # i.e. a single-column array, where each item in the column has the pixel RGB value
@@ -97,53 +96,42 @@ class Detector(DetectorBase):
             boxes = np.squeeze(boxes)
             classes = np.squeeze(classes).astype(np.int32)
             scores = np.squeeze(scores)
-            # 1: person class
-            # 2: basket class
-            idx_vec = [i for i, v in enumerate(classes) if (((v == 1) or (v==2)) and (scores[i] > self._score_threshold))]
+            idx_vec = [i for i, v in enumerate(classes) if ((v == 1) and (scores[i] > self._score_threshold))]
             if len(idx_vec) == 0:
-                return np.asarray(person_dets), np.asarray(basket_dets)
-
+                return np.asarray(dets)
             dim = _img.shape[0:2]
             for idx in idx_vec:
-                # box = ymin,xmin,ymax,xmax
-                box = self.box_normal_to_pixel(boxes[idx], dim)
+                box = self.box_normal_to_pixel(boxes[idx], dim)         # box = ymin,xmin,ymax,xmax
                 xmin = box[1] + self.roi_x1y1[0]
                 ymin = box[0] + self.roi_x1y1[1]
                 xmax = box[3] + self.roi_x1y1[0]
                 ymax = box[2] + self.roi_x1y1[1]
-                # Only keep person bbox has Square_bbox < 2/3*Square_image and Square_bbox > 100 pixel
-                if (classes[idx] == 1) and self.check_condition_bbox(dim, xmax - xmin, ymax - ymin):
-                    person_dets.append([xmin, ymin, xmax, ymax, scores[idx]])
-                if (classes[idx] == 2):
-                    basket_dets.append([xmin, ymin, xmax, ymax, scores[idx]])
+                # Only keep bbox has Square_bbox < 2/3*Square_image and Square_bbox > 100 pixel
+                if self.check_condition_bbox(dim, xmax - xmin, ymax - ymin):
+                    dets.append([xmin, ymin, xmax, ymax, scores[idx]])
+            del_index = []
+            for i in range(len(dets) - 1):
+                for j in range(i + 1, len(dets)):
+                    iou_ij = min_box_iou(dets[i], dets[j])
+                    if iou_ij > self._nms_threshold:
+                        if (dets[i][-1]>=dets[j][-1]):
+                            del_index.append(j)
+                        else:
+                            del_index.append(i)
+                            continue
+            del_index = np.unique(del_index)
+            for i in reversed(del_index):
+                dets.pop(i)
+            return np.asarray(dets)
 
-            self.post_process(person_dets)
-            self.post_process(basket_dets)
-
-            return np.asarray(person_dets), np.asarray(basket_dets)
-
-    def post_process(self, dets):
-        del_index = []
-        for i in range(len(dets) - 1):
-            for j in range(i + 1, len(dets)):
-                iou_ij = min_box_iou(dets[i], dets[j])
-                if iou_ij > self._nms_threshold:
-                    if (dets[i][-1] >= dets[j][-1]):
-                        del_index.append(j)
-                    else:
-                        del_index.append(i)
-                        continue
-        del_index = np.unique(del_index)
-        for i in reversed(del_index):
-            dets.pop(i)
 
 class PersonDetector(Detector):
     """
-    Using SSD Resnet-50 version
+    Using SSD version
     """
 
     def __init__(self):
-        super(PersonDetector, self).__init__(os.getenv('SSD_MODEL_PATH'), os.getenv('CAM_360_GPU'),
+        super(PersonDetector, self).__init__(os.getenv('RESTORE_PATH'), os.getenv('CAM_360_GPU'),
                                              float(os.getenv('SCORE_THRESHOLD')), float(os.getenv('NMS_THRESHOLD')))
 
     def check_condition_bbox(self, dim, w, h):
@@ -151,3 +139,12 @@ class PersonDetector(Detector):
             return True
         return False
 
+
+class ProductDetector(Detector):
+    def __init__(self):
+        super(ProductDetector, self).__init__(os.getenv('PRODUCT_DETECTOR_MODEL_PATH'),
+                                              os.getenv('PRODUCT_DETECTOR_GPU'),
+                                              float(os.getenv('PRODUCT_SCORE_THRESHOLD')), float(os.getenv('NMS_THRESHOLD')))
+
+    def check_condition_bbox(self, dim, w, h):
+        return True

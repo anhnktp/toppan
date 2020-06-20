@@ -2,7 +2,7 @@ version: '2.3'
 services:
    cam_engine:
       build: CamEngine
-      container_name: project09-cam-engine
+      container_name: project05-cam-engine
       working_dir: /awl/cam_engine
       runtime: nvidia
       volumes:
@@ -24,4 +24,38 @@ services:
       depends_on:
          - mongodb
       command: >
-         /bin/bash -c "source activate proj9 && python main.py"
+         /bin/bash -c "source activate proj5 && python main.py"
+
+   mongodb:
+      image: mongo:4.0
+      container_name: project05-mongodb
+      restart: always
+      environment:
+         - MONGO_DATA_DIR=/data/db
+         - MONGO_LOG_DIR=/dev/null
+      volumes:
+         - ./data/db:/data/db
+
+      command: mongod --smallfiles --logpath=/dev/null
+
+   hash_server:
+      build: Server
+      container_name: project05-hash-server
+      working_dir: /awl/flask
+      volumes:
+         - ./engine.env:/awl/flask/.env
+      ports:
+         - "7003:7000"
+      restart: always
+      command: python app.py
+
+   http_server:
+      image: awlaienginernd.azurecr.io/http_server
+      working_dir: /cropped_images
+      container_name: projec05-http-server
+      restart: always
+      volumes:
+         - ./cropped_images/:/cropped_images
+      ports:
+         - "7002:8000"
+      command: python -m RangeHTTPServer
