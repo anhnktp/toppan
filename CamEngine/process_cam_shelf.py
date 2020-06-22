@@ -1,26 +1,14 @@
-import time
-import redis
 import ast
-import uuid
-from collections import deque
 import glob
 
 import cv2
 import numpy as np
-import pandas as pd
 
 from helpers.settings import *
-from helpers.file_utils import remove_file
 from helpers.video_utils import get_vid_properties, VideoWriter
 from helpers.time_utils import *
-from helpers.time_utils import convert_to_jp_time
-from helpers.shelves_loc_utils import get_shelves_loc, draw_shelves_polygon
-
-from modules.DataTemplate import DataTemplate
 from modules.ActionRecognition import ActionRecognition
 from modules.PoseExtraction import PoseExtraction
-from modules.EventManager import EventManager
-from modules.VMSManager import VMSManager
 
 
 def get_shelf_item(cam_type):
@@ -153,11 +141,3 @@ if __name__ == '__main__':
     global_tracks = []
     
     process_cam_shelf(camShelf_queue, cam_type, num_loaded_model, global_tracks)
-
-
-
-
-
-
-
- 

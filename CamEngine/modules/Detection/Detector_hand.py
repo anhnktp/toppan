@@ -5,6 +5,7 @@ from .DetectorBase import DetectorBase
 from .sort import *
 import numpy as np
 import cv2
+
 import torch
 import time
 from .utils.nms import nms
