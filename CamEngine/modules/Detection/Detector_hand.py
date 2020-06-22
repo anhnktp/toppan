@@ -2,9 +2,15 @@
 from detectron2.engine import DefaultPredictor
 from detectron2.config import get_cfg
 from .DetectorBase import DetectorBase
-import torch
+from .sort import *
+import numpy as np
+import cv2
 
+import torch
+import time
 from .utils.nms import nms
+
+tracker = Sort()
 
 class HandDetector(DetectorBase):
     def __init__(self, config_path, model_path, device, score_threshold, nms_thresh, box_area_thresh):
@@ -23,13 +29,14 @@ class HandDetector(DetectorBase):
         # Create predictor
         self.predictor = DefaultPredictor(self.cfg)
     
-    def getOutput(self):
+    def getOutput(self, current_time):
         self.img = self.frame['data']
         # Make prediction for an image
 
         prediction = self.predictor(self.img)
         
-        dets = []
+        det_trk = []
+
         if len(prediction) > 0:
             outputs = prediction["instances"].to('cpu')
             boxes = outputs.pred_boxes
@@ -40,6 +47,7 @@ class HandDetector(DetectorBase):
             boxes = boxes[keep_idx]
             scores = scores[keep_idx]
 
+            dets = []
             for i in range(len(boxes)):
                 score = scores[i].item()
                 if score < self.score_threshold : continue
@@ -53,9 +61,25 @@ class HandDetector(DetectorBase):
                 yc = (y0 + y1) / 2.0
                 x0, y0, x1, y1 = int(x0), int(y0), int(x1), int(y1)
                 xc, yc = int(xc), int(yc)
-                dets.append([x0, y0, x1, y1, round(score, 2), (xc, yc)])
-                
-        return dets
+                #dets.append([x0, y0, x1, y1, round(score, 2), (xc, yc)])
+                dets.append([x0, y0, x1, y1, score])
+            np.set_printoptions(formatter={'float': lambda x: "{0:0.2f}".format(x)})
+            dets = np.asarray(dets)
+            try:
+                if len(dets) > 0:
+                    tracks = tracker.update(dets)
+                    for track in tracks:
+                        track = track.tolist()
+                        track.append(current_time)
+                        xc = int(0.5*(track[0] + track[2]))
+                        yc = int(0.5*(track[1] + track[3]))
+                        track.append((xc,yc))
+                        det_trk.append(track)
+            except:
+                print('unable to track')
+        # det_trk format is [xmin, ymin, xmax, ymax, id, time, (xcenter, ycenter)]
+
+        return det_trk
 
     
     def setFrames(self, frames_data):
@@ -105,8 +129,9 @@ class HandDetector(DetectorBase):
                     y1 = boxes[i].tensor[0:1, 3:4].item() + self.roi_x1y1[1]
                     x0, y0, x1, y1 = int(x0), int(y0), int(x1), int(y1)
                     dets_per_img.append([x0, y0, x1, y1, score])
-                
-                dets.append(dets_per_img)
+                tracker = Sort()
+                tracks = tracker.update(dets)
+                dets.append(tracks)
         return dets
     
     

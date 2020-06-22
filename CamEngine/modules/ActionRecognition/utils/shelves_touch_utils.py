@@ -12,17 +12,21 @@ def inPolygon(polygon, x):
     point = Point(x)
     return polygon.contains(point)
 
-def count_in_shelf_area(hands, item_boxes):
+def count_in_shelf_area(hands, item_boxes, vthresh = 100):
     shelves = []
 
     for hand in hands:
-        # shelf_1: POLYGON ((612 251, 174 402, 102 86, 513 4, 612 251))
         for shelf_name, item_box in item_boxes.items():
             hand_center = hand[-1]
+            hand_velo = hand[-2]
+            hand_vy = hand[-3]
+            curent_time = hand[-5]
+            hand_id = hand[4]
             have_item_event = False
-            if (not have_item_event) and (hand_center is not None) and inPolygon(item_box, hand_center):
+
+            if (not have_item_event) and (hand_center is not None) and inPolygon(item_box, hand_center) and hand_velo < vthresh and hand_vy < 0:
                 shelf_id = int(shelf_name.split('_')[-1])
-                shelves.append((shelf_id, hand_center))
+                shelves.append((shelf_id, hand_id, hand_center, curent_time))
                 have_item_event = True
 
             if have_item_event: # process the next hand
