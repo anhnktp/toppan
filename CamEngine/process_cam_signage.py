@@ -4,6 +4,7 @@ import ast
 import numpy as np
 from shapely.geometry.polygon import Polygon
 from modules.Detection.Detector_yolov3 import PersonDetector
+from modules.Detection.Detector_yolov5 import PersonFaceDetector
 from modules.Tracking import SignageTracker
 from modules.EventDetection import EventDetector
 from modules.Visualization import Visualizer
@@ -41,9 +42,10 @@ def process_cam_signage(cam_signage_queue, num_loaded_model):
     is_show = os.getenv('SHOW_GUI_360') == 'TRUE'
 
     # Create instance of PersonDetector
-    detector = PersonDetector(os.getenv('CAM_360_GPU'), os.getenv('YOLOv3_SIGNAGE_CFG_PATH'), ckpt_path=os.getenv('YOLOv3_SIGNAGE_MODEL_PATH'),
-                              cls_names=os.getenv('CLS_SIGNAGE_PATH'), augment=False)
+    # detector = PersonDetector(os.getenv('CAM_360_GPU'), os.getenv('YOLOv3_SIGNAGE_CFG_PATH'), ckpt_path=os.getenv('YOLOv3_SIGNAGE_MODEL_PATH'),
+    #                           cls_names=os.getenv('CLS_SIGNAGE_PATH'), augment=False)
 
+    detector = PersonFaceDetector(os.getenv('CAM_360_GPU'), os.getenv('YOLOv3_SIGNAGE_CFG_PATH'), ckpt_path=os.getenv('YOLOv3_SIGNAGE_MODEL_PATH'), augment=False)
     detector.setROI(roi_x1y1, roi_x2y2)
 
 

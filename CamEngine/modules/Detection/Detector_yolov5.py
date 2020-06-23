@@ -1,3 +1,5 @@
+import sys
+sys.path.insert(0, 'modules/Detection/yolov5')
 from .DetectorBase import DetectorBase
 from .yolov5.models.yolo import Model
 from .yolov5.utils.datasets import *
@@ -68,3 +70,50 @@ class HandDetector(DetectorBase):
             print('unable to track')
         # det_trk format is [xmin, ymin, xmax, ymax, id, time, (xcenter, ycenter)]
         return det_trk
+
+
+class PersonFaceDetector(DetectorBase):
+    """
+        Using YOLOv5 version
+    """
+    def __init__(self, device, cfg_path, ckpt_path, augment=False, img_size=(512, 512)):
+        super(DetectorBase, self).__init__()
+        torch.set_grad_enabled(False)
+        torch.backends.cudnn.benchmark = True
+        self.device = torch_utils.select_device(device)
+        self.augment = augment
+
+        self.model = torch.load(ckpt_path, map_location=self.device)['model'].float()
+  
+        self.model.to(self.device).eval()
+        self.conf_thres = float(os.getenv('SCORE_THRESHOLD'))
+        self.iou_thres = float(os.getenv('NMS_THRESHOLD'))
+
+
+    def getOutput(self):
+        img = self.frame['data']
+        # Padded resize
+        img = letterbox(img, new_shape=512, auto=False)[0]
+        img = img[:, :, ::-1].transpose(2, 0, 1)  # BGR to RGB, to 3x416x416
+        img = np.ascontiguousarray(img)
+
+        img = torch.from_numpy(img).to(self.device).float()
+        img /= 255.0
+        img = img.unsqueeze(0)
+        # save the memory when inference
+        with torch.no_grad():
+            pred = self.model(img, augment=self.augment)[0]
+
+        pred = non_max_suppression(pred, self.conf_thres, self.iou_thres, classes=None, agnostic=False)
+        person_dets = []
+        face_dets = []
+        for i, det in enumerate(pred):
+            if det is not None and len(det):
+                # Rescale boxes from img_size to im0 size
+                det[:, :4] = scale_coords(img.shape[2:], det[:, :4], (self.roi_x2y2[1], self.roi_x2y2[0])).round()
+                dets = det.cpu().detach().numpy()
+                person_dets = dets[dets[:, -1] == 0][:, 0:-1]
+                face_dets = dets[dets[:, -1] == 1][:, 0:-1]
+                return person_dets, face_dets
+
+        return np.asarray(person_dets), np.asarray(face_dets)
