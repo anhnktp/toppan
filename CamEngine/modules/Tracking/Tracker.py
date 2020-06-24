@@ -268,23 +268,26 @@ class SignageTracker(TrackerBase):
                 if len(trk.duration_hp_list) != 0:
                     duration_group = calculate_duration(trk.basket_time, self._timestamp)
                     # *IMPORTANT NOTE: basket_time: the first time the person appears in the video, just re-use
+                    x2_center = int((min(max(trk.get_last_state(-1)[0][0], 0), ast.literal_eval(os.getenv('IMG_SIZE_CAM_SIGNAGE'))[0]) + 
+                                    min(max(trk.get_last_state(-1)[0][2], 0), ast.literal_eval(os.getenv('IMG_SIZE_CAM_SIGNAGE'))[0]) ) / 2)
+                    y2_center = int((min(max(trk.get_last_state(-1)[0][1], 0), ast.literal_eval(os.getenv('IMG_SIZE_CAM_SIGNAGE'))[0]) + 
+                                    min(max(trk.get_last_state(-1)[0][3], 0), ast.literal_eval(os.getenv('IMG_SIZE_CAM_SIGNAGE'))[0]) ) / 2)
+
                     localIDs_end.append([trk.id, len(ppl_accompany), trk.basket_time, self._timestamp, 'has_attention',
                                          trk.start_hp_list, trk.duration_hp_list, duration_group, trk.end_hp_list,
-                                         trk.sig_start_bbox[0], trk.sig_start_bbox[2],
-                                         int(min(max(trk.get_last_state(-1)[0][0], 0),
-                                                 ast.literal_eval(os.getenv('IMG_SIZE_CAM_SIGNAGE'))[0])),
-                                         int(min(max(trk.get_last_state(-1)[0][2], 0),
-                                                 ast.literal_eval(os.getenv('IMG_SIZE_CAM_SIGNAGE'))[0]))])
+                                         int((trk.sig_start_bbox[0] + trk.sig_start_bbox[2])/2), int((trk.sig_start_bbox[1] + trk.sig_start_bbox[3])/2),
+                                         x2_center, y2_center])
                 else:
                     duration_attention = 'None'
                     duration_group = calculate_duration(trk.basket_time, self._timestamp)
+                    x2_center = int((min(max(trk.get_last_state(-1)[0][0], 0), ast.literal_eval(os.getenv('IMG_SIZE_CAM_SIGNAGE'))[0]) + 
+                                    min(max(trk.get_last_state(-1)[0][2], 0), ast.literal_eval(os.getenv('IMG_SIZE_CAM_SIGNAGE'))[0]) ) / 2)
+                    y2_center = int((min(max(trk.get_last_state(-1)[0][1], 0), ast.literal_eval(os.getenv('IMG_SIZE_CAM_SIGNAGE'))[0]) + 
+                                    min(max(trk.get_last_state(-1)[0][3], 0), ast.literal_eval(os.getenv('IMG_SIZE_CAM_SIGNAGE'))[0]) ) / 2)
                     localIDs_end.append([trk.id, len(ppl_accompany), trk.basket_time, self._timestamp, 'no', 'None',
-                                         duration_attention, duration_group, 'None', trk.sig_start_bbox[0],
-                                         trk.sig_start_bbox[2],
-                                         int(min(max(trk.get_last_state(-1)[0][0], 0),
-                                                 ast.literal_eval(os.getenv('IMG_SIZE_CAM_SIGNAGE'))[0])),
-                                         int(min(max(trk.get_last_state(-1)[0][2], 0),
-                                                 ast.literal_eval(os.getenv('IMG_SIZE_CAM_SIGNAGE'))[0]))])
+                                         duration_attention, duration_group, 'None', int((trk.sig_start_bbox[0] + trk.sig_start_bbox[2])/2),
+                                         int((trk.sig_start_bbox[1] + trk.sig_start_bbox[2])/2), x2_center, y2_center])
+                                         
                 self._trackers.pop(i)
 
         if (len(res) > 0):

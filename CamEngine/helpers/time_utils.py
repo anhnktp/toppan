@@ -33,8 +33,8 @@ def compute_time_iou(cam_360_start_time, cam_360_end_time, cam_signage_start_tim
         - Time IoU of a tracker between cam 360 and cam signage (0<= IoU <=1)
     """
     if cam_360_end_time <= cam_signage_start_time or cam_360_start_time >= cam_signage_end_time:
-        return 0
+        return 0, 0
     else:
         intersection = (min(cam_360_end_time, cam_signage_end_time) - max(cam_signage_start_time, cam_360_start_time)).total_seconds()
         union = (max(cam_signage_end_time, cam_360_end_time) - min(cam_360_start_time, cam_signage_start_time)).total_seconds()
-        return intersection / union
+        return intersection / union, intersection

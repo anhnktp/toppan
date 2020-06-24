@@ -21,20 +21,21 @@ def process_cam_signage(cam_signage_queue, num_loaded_model):
     # Config parameters
     roi_x1y1, roi_x2y2 = ast.literal_eval(os.getenv('ROI_CAM_SIGNAGE'))[0], ast.literal_eval(os.getenv('ROI_CAM_SIGNAGE'))[1]
     img_size_cam_signage = ast.literal_eval(os.getenv('IMG_SIZE_CAM_SIGNAGE'))
+    signage1_enter_area = Polygon(ast.literal_eval(os.getenv('SIGNAGE1_ENTER_AREA')))
 
     # Get cam signage id
     cam_id = update_camera_id(os.getenv('RTSP_CAM_SIGNAGE'))
 
     # Create video writer
     if os.getenv('SAVE_VID') == 'TRUE':
-        fourcc = cv2.VideoWriter_fourcc(*'H264')
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
         vid_path = join(os.getenv('OUTPUT_DIR'), 'CAM_SIGNAGE_{:02}.mp4'.format(cam_id))
         videoWriter = cv2.VideoWriter(vid_path, fourcc, int(os.getenv('FPS_CAM_SIGNAGE')), img_size_cam_signage)
 
     # Create list to store data in csv
     column_name = ['camera ID', 'shopper ID', 'process ID', 'info', 'Start_time',
-                   'End_time', 'Duration(s)', 'Start_bbox_xmin', 'Start_bbox_xmax', 'End_bbox_xmin',
-                   'End_bbox_xmax']
+                   'End_time', 'Duration(s)', 'Start_bbox_x', 'Start_bbox_y', 'End_bbox_x',
+                   'End_bbox_y']
     csv_writer = CSV_Writer(column_name, os.getenv('CSV_CAM_SIGNAGE_{:02}'.format(cam_id)))
 
     # Create instance of Visualizer
@@ -121,12 +122,14 @@ def process_cam_signage(cam_signage_queue, num_loaded_model):
         ppl_accompany = ppl_accompany[ppl_accompany > int(os.getenv('MIN_AREA_FREQ'))]
         # change to new format
         duration_group = calculate_duration(trk.basket_time, cur_time)
+        x2_center = int((min(max(trk.get_state()[0][0], 0), img_size_cam_signage[0]) + min(max(trk.get_state()[0][2], 0), img_size_cam_signage[0]))/2)
+        y2_center = int((min(max(trk.get_state()[0][1], 0), img_size_cam_signage[0]) + min(max(trk.get_state()[0][3], 0), img_size_cam_signage[0]))/2)
         csv_writer.write((cam_id, trk.id, 1203, 'GROUP {} PEOPLE'.format(len(ppl_accompany) + 1),
                           convert_timestamp_to_human_time(trk.basket_time), convert_timestamp_to_human_time(cur_time),
                           duration_group,
-                          trk.sig_start_bbox[0], trk.sig_start_bbox[2],
-                          int(min(max(trk.get_state()[0][0], 0), img_size_cam_signage[0])),
-                          int(min(max(trk.get_state()[0][2], 0), img_size_cam_signage[0]))))
+                          int((trk.sig_start_bbox[0] + trk.sig_start_bbox[2])/2), int((trk.sig_start_bbox[1] + trk.sig_start_bbox[3])/2),
+                          x2_center, y2_center))
+                          
 
         if len(trk.duration_hp_list) != 0:
             for start, end, duration in zip(trk.start_hp_list, trk.end_hp_list, trk.duration_hp_list):
@@ -137,7 +140,7 @@ def process_cam_signage(cam_signage_queue, num_loaded_model):
 
     # Post Processing Camera Signage
     post_processing_signage_csv(input_csv=os.getenv('CSV_CAM_SIGNAGE_{:02}'.format(cam_id)),
-                                output_csv=os.getenv('PROCESSED_CSV_SIGNAGE_{:02}_PATH'.format(cam_id)))
+                                output_csv=os.getenv('PROCESSED_CSV_SIGNAGE_{:02}_PATH'.format(cam_id)), signage_enter_area=signage1_enter_area)
     engine_logger.info('Created successfully CSV file of CAM_Signage !')
 
     engine_logger.critical('------ CAM_Signage Engine process stopped ------')
