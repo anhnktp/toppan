@@ -231,38 +231,33 @@ def post_processing_signage_csv(input_csv, output_csv, signage_enter_area, time_
     signage_df = load_csv_signage(input_csv, post_processed=False)
     signage_df['assigned'] = 0
     group_df = signage_df.loc[(signage_df['info'].str.contains('GROUP'))]
-    print(group_df)
+    #print(group_df)
     # Find and assign rows of the same shopper
-    counter = 0
+
     for index1, row1 in group_df.iterrows():
-        print('Index1: {}'.format(index1))
-        min_dist = sys.maxsize
-        min_index = None
+
         for index2, row2 in group_df.iterrows():
+
+            min_dist = sys.maxsize
+            min_index = None
             
             if index1 >= index2: continue
-            print('>>Index2: {}'.format(index2))
-            time_diff = (row2['Start_time'] - row1['End_time']).total_seconds()
+
+            time_diff = (row2['Start_time'] - signage_df.at[signage_df.index.values[index1], 'End_time']).total_seconds()
             
-            dist = distance.euclidean((float(row1['End_bbox_x']), float(row1['End_bbox_y'])),
+            dist = distance.euclidean((float(signage_df.at[signage_df.index.values[index1], 'End_bbox_x']), float(signage_df.at[signage_df.index.values[index1], 'End_bbox_y'])),
                                           (float(row2['Start_bbox_x']), float(row2['Start_bbox_y'])))
             center_point = Point(float(row2['Start_bbox_x']), float(row2['Start_bbox_y']))
             if time_diff <= time_diff_threshold and time_diff >= 0 and dist < min_dist and not signage_enter_area.contains(center_point) and (signage_df.at[signage_df.index.values[index2], 'assigned'] == 0):
                 min_dist = dist
                 min_index = index2
-                print('>>>Index {} matched {}'.format(index1, index2))
-                # print(">> Time diff between {} and {}: {}".format(signage_df.at[signage_df.index.values[index1], 'shopper ID'], signage_df.at[signage_df.index.values[min_index], 'shopper ID'], time_diff))
-        if min_index:
-        # if min_index:
-            print('Index {} matched with {}'.format(index1, min_index))
-            mask = signage_df['shopper ID'] == signage_df.at[signage_df.index.values[min_index], 'shopper ID']
-            signage_df['shopper ID'][mask] = signage_df.at[signage_df.index.values[index1], 'shopper ID']
-            signage_df.at[signage_df.index.values[min_index], 'assigned'] = 1
-            signage_df.at[signage_df.index.values[index1], 'End_time'] = signage_df.at[signage_df.index.values[min_index], 'End_time']
-            # counter += 1
-            # if counter == 9:
-            #     break
-    # print(signage_df)
+
+                print('ID {} matched with {}'.format(signage_df.at[signage_df.index.values[index1], 'shopper ID'], signage_df.at[signage_df.index.values[min_index], 'shopper ID']))
+                mask = signage_df['shopper ID'] == signage_df.at[signage_df.index.values[min_index], 'shopper ID']
+                signage_df['shopper ID'][mask] = signage_df.at[signage_df.index.values[index1], 'shopper ID']
+                signage_df.at[signage_df.index.values[min_index], 'assigned'] = 1
+                signage_df.at[signage_df.index.values[index1], 'End_time'] = signage_df.at[signage_df.index.values[min_index], 'End_time']
+
     # Concatenate rows of same shopper ID
     unique_ids = signage_df['shopper ID'].unique()
     concat_df = pd.DataFrame(
