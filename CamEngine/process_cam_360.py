@@ -4,8 +4,8 @@ import ast
 import numpy as np
 from shapely.geometry.polygon import Polygon
 # from modules.Detection.Detector_ssd import PersonDetector
-# from modules.Detection.Detector_blitznet import PersonDetector
-from modules.Detection.Detector_yolov3 import PersonDetector
+from modules.Detection.Detector_blitznet import PersonDetector
+# from modules.Detection.Detector_yolov3 import PersonDetector
 from modules.Tracking import Tracker
 from modules.EventDetection import EventDetector
 from modules.Visualization import Visualizer
@@ -35,7 +35,7 @@ def process_cam_360(cam360_queue, num_loaded_model):
 
     # Create video writer
     if os.getenv('SAVE_VID') == 'TRUE':
-        fourcc = cv2.VideoWriter_fourcc(*'H264')
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
         vid_path = join(os.getenv('OUTPUT_DIR'), 'CAM_360.mp4')
         videoWriter = cv2.VideoWriter(vid_path, fourcc, int(os.getenv('FPS_CAM_360')), img_size_cam_360)
 
@@ -49,10 +49,10 @@ def process_cam_360(cam360_queue, num_loaded_model):
     is_show = os.getenv('SHOW_GUI_360') == 'TRUE'
 
     # Create instance of PersonDetector
-    detector = PersonDetector(os.getenv('CAM_360_GPU'), os.getenv('YOLOv3_CFG_PATH'), ckpt_path=os.getenv('YOLOv3_MODEL_PATH'),
-                              cls_names=os.getenv('CLS_PATH'), augment=False)
+    # detector = PersonDetector(os.getenv('CAM_360_GPU'), os.getenv('YOLOv3_CFG_PATH'), ckpt_path=os.getenv('YOLOv3_MODEL_PATH'),
+    #                           cls_names=os.getenv('CLS_PATH'), augment=False)
     # Or use Blitznet detection
-    # detector = PersonDetector(os.getenv('CAM_360_GPU'), os.getenv('CLS_BLITZNET_PATH'), os.getenv('BLITZNET_MODEL_PATH'))
+    detector = PersonDetector(os.getenv('CAM_360_GPU'), os.getenv('CLS_BLITZNET_PATH'), os.getenv('BLITZNET_MODEL_PATH'))
 
     # Use SSD detection
     # detector = PersonDetector()
@@ -160,7 +160,7 @@ def process_cam_360(cam360_queue, num_loaded_model):
 
         # Visualization: plot bounding boxes & trajectories
         # draw_polygon(img_ori, ast.literal_eval(os.getenv('SIGNAGE2_AREA')))
-        # draw_polygon(img_ori, ast.literal_eval(os.getenv('SIGNAGE1_AREA')))
+        draw_polygon(img_ori, ast.literal_eval(os.getenv('SIGNAGE1_AREA')))
         visualizer.draw_fish_eye(img_ori, basket_dets, trackers, event_detector)
 
         # Display the resulting frame
@@ -225,7 +225,8 @@ def process_cam_360(cam360_queue, num_loaded_model):
 
     second_csv_df = pd.DataFrame(csv_writer.csv_data, columns=csv_writer.column_name)
     csv_df = csv_df.append(second_csv_df, ignore_index=True)
-
+    to_csv(csv_path='outputs/log_all_combine_orig.csv', sep=',', index_label='ID',
+           sort_column=['shopper ID', 'timestamp (unix timestamp)'], csv_df=csv_df)
     # Perform csv combination
     csv_df = combine_signages_to_fisheye(csv_df, signage1_df, signage2_df)
     to_csv(csv_path=os.getenv('CSV_CAM_360'), sep=',', index_label='ID',

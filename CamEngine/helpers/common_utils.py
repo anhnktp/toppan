@@ -297,23 +297,7 @@ def post_processing_signage_csv(input_csv, output_csv, signage_enter_area, time_
 
     concat_df.to_csv(output_csv, sep=',', index_label='ID', index=True)
 
-
-def compute_x_iou(point1_end, point2_start):
-    """ Compute overlap in x coordinates of point1 and point2
-    Args:
-        - point1_end: ending bbox of track 1 (p1_xmin, p1_xmax)
-        - point2_start: starting bbox of track 2 (p2_xmin, p2_xmax)
-    Returns:
-        - IoU in range [0,1]
-    """
-    if point1_end[1] <= point2_start[0] or point1_end[0] >= point2_start[1]:
-        return 0
-    else:
-        intersection = min(point1_end[1], point2_start[1]) - max(point1_end[0], point2_start[0])
-        union = max(point1_end[1], point2_start[1]) - min(point1_end[0], point2_start[0])
-        return intersection / union
-
-def combine_signages_to_fisheye(fisheye_df, signage1_df, signage2_df, iou_threshold=0.1):
+def combine_signages_to_fisheye(fisheye_df, signage1_df, signage2_df, iou_threshold=0.01):
     """ Combine signage csv to fisheye csv
     Args:
         - fisheye_df (DataFrame): post-processed fisheye csv
@@ -328,6 +312,7 @@ def combine_signages_to_fisheye(fisheye_df, signage1_df, signage2_df, iou_thresh
 
     fisheye_sig1_tracks = []
     fisheye_sig2_tracks = []
+    print('Fisheye:....')
     for identity in unique_fisheye_ids:
         enter_sig1_df = fisheye_df.loc[
             fisheye_df['info'].str.contains('ENTER SIGNAGE 1') & (fisheye_df['shopper ID'] == identity)]
@@ -340,16 +325,20 @@ def combine_signages_to_fisheye(fisheye_df, signage1_df, signage2_df, iou_thresh
             fisheye_df['info'].str.contains('LEAVE SIGNAGE 2') & (fisheye_df['shopper ID'] == identity)]
 
         if len(enter_sig1_df) > 0 and len(leave_sig1_df) > 0:
+            print('--------------------------------------------')
+            print(identity)
+            print(datetime.strptime(fisheye_df.at[enter_sig1_df.index.values[0], 'timestamp (UTC - JST)'], "%Y:%m:%d %H:%M:%S.%f"))
+            print(datetime.strptime(fisheye_df.at[leave_sig1_df.index.values[-1], 'timestamp (UTC - JST)'], "%Y:%m:%d %H:%M:%S.%f"))
             fisheye_sig1_tracks.append((identity, datetime.strptime(
                 fisheye_df.at[enter_sig1_df.index.values[0], 'timestamp (UTC - JST)'], "%Y:%m:%d %H:%M:%S.%f"),
                                         datetime.strptime(
-                                            fisheye_df.at[leave_sig1_df.index.values[0], 'timestamp (UTC - JST)'],
+                                            fisheye_df.at[leave_sig1_df.index.values[-1], 'timestamp (UTC - JST)'],
                                             "%Y:%m:%d %H:%M:%S.%f")))
         if len(enter_sig2_df) > 0 and len(leave_sig2_df) > 0:
             fisheye_sig2_tracks.append((identity, datetime.strptime(
                 fisheye_df.at[enter_sig2_df.index.values[0], 'timestamp (UTC - JST)'], "%Y:%m:%d %H:%M:%S.%f"),
                                         datetime.strptime(
-                                            fisheye_df.at[leave_sig2_df.index.values[0], 'timestamp (UTC - JST)'],
+                                            fisheye_df.at[leave_sig2_df.index.values[-1], 'timestamp (UTC - JST)'],
                                             "%Y:%m:%d %H:%M:%S.%f")))
 
     # Pre-process signage cameras
@@ -357,7 +346,7 @@ def combine_signages_to_fisheye(fisheye_df, signage1_df, signage2_df, iou_thresh
     signage2_tracks = []
     unique_signage1_ids = signage1_df['shopper ID'].unique()
     unique_signage2_ids = signage2_df['shopper ID'].unique()
-
+    print(unique_signage1_ids)
     for identity in unique_signage1_ids:
 
         sig1_df = signage1_df.loc[signage1_df['info'].str.contains('GROUP') & (signage1_df['shopper ID'] == identity)]
@@ -377,7 +366,8 @@ def combine_signages_to_fisheye(fisheye_df, signage1_df, signage2_df, iou_thresh
         for r, trk1 in enumerate(fisheye_sig1_tracks):
             for c, trk2 in enumerate(signage1_tracks):
                 IoU_mat[r, c],_ = compute_time_iou(trk1[1], trk1[2], trk2[1], trk2[2])
-
+        print('Signage 1 IoU:')
+        print(IoU_mat)
         matched_row, matched_col = linear_sum_assignment(-IoU_mat)
         for r, c in zip(matched_row, matched_col):
             if IoU_mat[r, c] >= iou_threshold:
@@ -387,7 +377,7 @@ def combine_signages_to_fisheye(fisheye_df, signage1_df, signage2_df, iou_thresh
                     info = None
                     if 'GROUP' in row['info']:
                         process_ID = 1203
-                        info = row['info'] + ' IN SIGNAGE_1'
+                        info = row['info']
                     elif 'attention' in row['info']:
                         process_ID = 1557
                         info = 'HAS ATTENTION TO SIGNAGE_1 IN {}s'.format(row['Duration'])
@@ -412,8 +402,7 @@ def combine_signages_to_fisheye(fisheye_df, signage1_df, signage2_df, iou_thresh
                     process_ID = None
                     info = None
                     if 'GROUP' in row['info']:
-                        process_ID = 1203
-                        info = row['info'] + ' IN SIGNAGE_2'
+                        continue
                     elif 'attention' in row['info']:
                         process_ID = 1557
                         info = 'HAS ATTENTION TO SIGNAGE_2 IN {}s'.format(row['Duration'])
