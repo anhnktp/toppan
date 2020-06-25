@@ -97,6 +97,8 @@ def process_cam_signage(cam_signage_queue, num_loaded_model):
 
         visualizer.draw_signage(img_ori, faces, trackers)
 
+        draw_polygon(img_ori, ast.literal_eval(os.getenv('SIGNAGE1_ENTER_AREA')))
+
         # Display the resulting frame
         cv2.putText(img_ori, 'Frame #{:d} ({:.2f}ms)'.format(frame_cnt, (time.time() - start_time) * 1000), (2, 35),
                     0, fontScale=0.6, color=(0, 255, 0), thickness=2)

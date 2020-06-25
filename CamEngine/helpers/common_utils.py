@@ -11,7 +11,7 @@ from PIL import Image
 from shapely.geometry import Point
 from scipy.optimize import linear_sum_assignment
 from scipy.spatial import distance
-from datetime import datetime
+from datetime import datetime, timedelta
 from .time_utils import compute_time_iou
 
 try:
@@ -216,8 +216,7 @@ def update_camera_id(filename):
     return int(os.environ['SIGNAGE_ID'])
 
 
-def post_processing_signage_csv(input_csv, output_csv, signage_enter_area, time_diff_threshold=5.0, x_overlap_threshold=1.0,
-                                accompany_iou_threshold=5):
+def post_processing_signage_csv(input_csv, output_csv, signage_enter_area, time_diff_threshold=5.0, accompany_iou_threshold=5.0):
     """ Do post-processing on signage dataframe
     Args:
         - input_csv: input path of the csv file
@@ -231,32 +230,29 @@ def post_processing_signage_csv(input_csv, output_csv, signage_enter_area, time_
     signage_df = load_csv_signage(input_csv, post_processed=False)
     signage_df['assigned'] = 0
     group_df = signage_df.loc[(signage_df['info'].str.contains('GROUP'))]
-    #print(group_df)
-    # Find and assign rows of the same shopper
 
+    # Find and assign rows of the same shopper
+    time_offset = timedelta(seconds=float(os.getenv('MAX_AGE'))/float(os.getenv('FPS_CAM_SIGNAGE')))
     for index1, row1 in group_df.iterrows():
+        min_dist = sys.maxsize
+        min_index = None
 
         for index2, row2 in group_df.iterrows():
-
-            min_dist = sys.maxsize
-            min_index = None
-            
             if index1 >= index2: continue
-
-            time_diff = (row2['Start_time'] - signage_df.at[signage_df.index.values[index1], 'End_time']).total_seconds()
-            
-            dist = distance.euclidean((float(signage_df.at[signage_df.index.values[index1], 'End_bbox_x']), float(signage_df.at[signage_df.index.values[index1], 'End_bbox_y'])),
-                                          (float(row2['Start_bbox_x']), float(row2['Start_bbox_y'])))
+            time_diff = (row2['Start_time'] - signage_df.at[signage_df.index.values[index1], 'End_time'] + time_offset).total_seconds()
+            dist = distance.euclidean((float(signage_df.at[signage_df.index.values[index1], 'End_bbox_x']),
+                                        float(signage_df.at[signage_df.index.values[index1], 'End_bbox_y'])), (float(row2['Start_bbox_x']), float(row2['Start_bbox_y'])))
             center_point = Point(float(row2['Start_bbox_x']), float(row2['Start_bbox_y']))
             if time_diff <= time_diff_threshold and time_diff >= 0 and dist < min_dist and not signage_enter_area.contains(center_point) and (signage_df.at[signage_df.index.values[index2], 'assigned'] == 0):
                 min_dist = dist
                 min_index = index2
-
                 print('ID {} matched with {}'.format(signage_df.at[signage_df.index.values[index1], 'shopper ID'], signage_df.at[signage_df.index.values[min_index], 'shopper ID']))
                 mask = signage_df['shopper ID'] == signage_df.at[signage_df.index.values[min_index], 'shopper ID']
                 signage_df['shopper ID'][mask] = signage_df.at[signage_df.index.values[index1], 'shopper ID']
                 signage_df.at[signage_df.index.values[min_index], 'assigned'] = 1
                 signage_df.at[signage_df.index.values[index1], 'End_time'] = signage_df.at[signage_df.index.values[min_index], 'End_time']
+                min_dist = sys.maxsize
+                min_index = None
 
     # Concatenate rows of same shopper ID
     unique_ids = signage_df['shopper ID'].unique()
