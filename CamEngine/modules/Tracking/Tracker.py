@@ -265,8 +265,12 @@ class SignageTracker(TrackerBase):
                 ppl_accompany = ppl_accompany[ppl_accompany > self._min_area_freq]
 
                 # check no attention + calculate the duration
-                if len(trk.duration_hp_list) != 0:
+                if len(trk.duration_hp_list) != 0 or trk.cnt_frame_attention > 0:
                     duration_group = calculate_duration(trk.basket_time, self._timestamp)
+                    duration_attention  = trk.duration_hp_list if len(trk.duration_hp_list) != 0 else (str(trk.cnt_frame_attention / int(os.getenv('FPS_CAM_SIGNAGE'))))
+                    if (isinstance(duration_attention,str)):
+                        trk.duration_hp_list.append(duration_attention)
+                        trk.end_hp_list.append(self._timestamp)
                     # *IMPORTANT NOTE: basket_time: the first time the person appears in the video, just re-use
                     x2_center = int((min(max(trk.get_last_state(-1)[0][0], 0), ast.literal_eval(os.getenv('IMG_SIZE_CAM_SIGNAGE'))[0]) + 
                                     min(max(trk.get_last_state(-1)[0][2], 0), ast.literal_eval(os.getenv('IMG_SIZE_CAM_SIGNAGE'))[0]) ) / 2)
