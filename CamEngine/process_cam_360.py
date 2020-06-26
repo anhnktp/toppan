@@ -225,6 +225,7 @@ def process_cam_360(cam360_queue, num_loaded_model):
 
     second_csv_df = pd.DataFrame(csv_writer.csv_data, columns=csv_writer.column_name)
     csv_df = csv_df.append(second_csv_df, ignore_index=True)
+
     # Perform csv combination
     csv_df = combine_signages_to_fisheye(csv_df, signage1_df, signage2_df)
     to_csv(csv_path=os.getenv('CSV_CAM_360'), sep=',', index_label='ID',

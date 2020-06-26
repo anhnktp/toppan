@@ -48,11 +48,7 @@ class HandDetector(DetectorBase):
                 det[:, :4] = scale_coords(img.shape[2:], det[:, :4], (self.roi_x2y2[1], self.roi_x2y2[0])).round()
                 for *xyxy, conf, cat in det:
                     x0, y0, x2, y2 = xyxy[0], xyxy[1], xyxy[2], xyxy[3]
-                    xc = (x0 + x2) / 2.0
-                    yc = (y0 + y2) / 2.0
                     x0, y0, x2, y2 = int(x0), int(y0), int(x2), int(y2)
-                    xc, yc = int(xc), int(yc)
-                    #dets.append([x0, y0, x2, y2, round(conf.item(), 2), (xc, yc)])
                     dets.append([x0, y0, x2, y2, round(conf.item(), 2)])
         np.set_printoptions(formatter={'float': lambda x: "{0:0.2f}".format(x)})
         dets = np.asarray(dets)
@@ -68,7 +64,6 @@ class HandDetector(DetectorBase):
                     det_trk.append(track)
         except:
             print('unable to track')
-        # det_trk format is [xmin, ymin, xmax, ymax, id, time, (xcenter, ycenter)]
         return det_trk
 
 

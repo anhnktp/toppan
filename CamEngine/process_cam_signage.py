@@ -3,7 +3,7 @@ import cv2
 import ast
 import numpy as np
 from shapely.geometry.polygon import Polygon
-from modules.Detection.Detector_yolov3 import PersonDetector
+# from modules.Detection.Detector_yolov3 import PersonDetector
 from modules.Detection.Detector_yolov5 import PersonFaceDetector
 from modules.Tracking import SignageTracker
 from modules.EventDetection import EventDetector
@@ -21,14 +21,14 @@ def process_cam_signage(cam_signage_queue, num_loaded_model):
     # Config parameters
     roi_x1y1, roi_x2y2 = ast.literal_eval(os.getenv('ROI_CAM_SIGNAGE'))[0], ast.literal_eval(os.getenv('ROI_CAM_SIGNAGE'))[1]
     img_size_cam_signage = ast.literal_eval(os.getenv('IMG_SIZE_CAM_SIGNAGE'))
-    signage_enter_area = Polygon(ast.literal_eval(os.getenv('SIGNAGE_ENTER_AREA')))
+    signage1_enter_area = Polygon(ast.literal_eval(os.getenv('SIGNAGE1_ENTER_AREA')))
 
     # Get cam signage id
     cam_id = update_camera_id(os.getenv('RTSP_CAM_SIGNAGE'))
 
     # Create video writer
     if os.getenv('SAVE_VID') == 'TRUE':
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        fourcc = cv2.VideoWriter_fourcc(*'H264')
         vid_path = join(os.getenv('OUTPUT_DIR'), 'CAM_SIGNAGE_{:02}.mp4'.format(cam_id))
         videoWriter = cv2.VideoWriter(vid_path, fourcc, int(os.getenv('FPS_CAM_SIGNAGE')), img_size_cam_signage)
 
@@ -142,7 +142,7 @@ def process_cam_signage(cam_signage_queue, num_loaded_model):
 
     # Post Processing Camera Signage
     post_processing_signage_csv(input_csv=os.getenv('CSV_CAM_SIGNAGE_{:02}'.format(cam_id)),
-                                output_csv=os.getenv('PROCESSED_CSV_SIGNAGE_{:02}_PATH'.format(cam_id)), signage_enter_area=signage_enter_area)
-    engine_logger.info('Created successfully CSV file of CAM_Signage !')
+                                output_csv=os.getenv('PROCESSED_CSV_SIGNAGE_{:02}_PATH'.format(cam_id)), signage_enter_area=signage1_enter_area)
+    engine_logger.info('Created successfully CSV file of CAM_Signage {:02}!'.format(cam_id))
 
     engine_logger.critical('------ CAM_Signage Engine process stopped ------')
