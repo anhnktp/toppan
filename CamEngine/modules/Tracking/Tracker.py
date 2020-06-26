@@ -16,7 +16,6 @@ def find_area(bbox, in_door_box, out_door_box, a_box, b_box, sig1_box, sig2_box)
     # Check if a track is in the singage FoV
     is_in_sig1_area = sig1_box.contains(center_point)
     is_in_sig2_area = sig2_box.contains(center_point)
-
     if out_door_box.contains(bottom_left_point) or out_door_box.contains(top_left_point):
     # if out_door_box.contains(bottom_left_point):
         return 'OUT_DOOR_AREA', is_in_sig1_area, is_in_sig2_area
@@ -58,11 +57,13 @@ class Tracker(TrackerBase):
             local_id: ID of track
         """
         # get predicted locations from existing trackers.
-        baskets, in_door_box, out_door_box, a_box, b_box, none_box, sig1_box, sig2_box = args
+        baskets, in_door_box, out_door_box, a_box, b_box, none_box, sig1_box, sig2_box, reid_area, track_manager = args
         trks = np.zeros((len(self._trackers), 4))
         to_del = []
         for t, trk in enumerate(trks):
             pos = self._trackers[t].predict()[0]
+            if self._trackers[t].id == 2:
+                print(self._trackers[t].area)
             trk[:] = [pos[0], pos[1], pos[2], pos[3]]
             if (np.any(np.isnan(pos))):
                 to_del.append(t)
@@ -82,8 +83,8 @@ class Tracker(TrackerBase):
                 if (area == 'B_AREA'): res[d, -5] = 4  # 4 = B
                 self._trackers[t].area = area
             else:
-                res[d, -3] = -1  # -1 = None move to special area
-            self._trackers[t].update(dets[d], self._min_hits)
+                res[d, -5] = -1  # -1 = None move to special area
+            self._trackers[t].update(dets[d], self._min_hits, self._timestamp, reid_area, track_manager, self._frame_data, is_reid=True)
 
             if is_in_sig1_area:
                 if self._trackers[t].sig1_start_time == None:
@@ -120,29 +121,7 @@ class Tracker(TrackerBase):
             res[i, -7] = trk.sig1_end_time
             res[i, -8] = trk.sig2_start_time
             res[i, -9] = trk.sig2_end_time
-
-            bbox = dets[i, 0:-1]
-            area, is_in_sig1_area, is_in_sig2_area = find_area(bbox, in_door_box, out_door_box, a_box, b_box, sig1_box,
-                                                               sig2_box)
-
-            if is_in_sig1_area:
-                if trk.sig1_start_time is None:
-                    trk.sig1_start_time = self._timestamp
-                trk.sig1_end_time = self._timestamp
-
-            if is_in_sig2_area:
-                if trk.sig2_start_time is None:
-                    trk.sig2_start_time = self._timestamp
-                trk.sig2_end_time = self._timestamp
-
-            if (area is not None) and (trk.area != area):
-                if (trk.area == 'OUT_DOOR_AREA') and (area == 'IN_DOOR_AREA'): res[i, -5] = 1  # 1 = ENTER
-                if (trk.area == 'IN_DOOR_AREA') and (area == 'OUT_DOOR_AREA'): res[i, -5] = 2  # 2 = EXIT
-                if (area == 'A_AREA'): res[i, -5] = 3  # 3 = A
-                if (area == 'B_AREA'): res[i, -5] = 4  # 4 = B
-                trk.area = area
-            else:
-                res[i, -3] = -1  # -1 = None move to special area
+            res[i, -5] = -1  # -1 = None move to special area
 
         # Update basket to existing tracks
         self.associate_basket2trackers(baskets)
@@ -150,16 +129,19 @@ class Tracker(TrackerBase):
         # remove dead tracklet
         i = len(self._trackers)
         localIDs_end = []
+        end_trackers = []
         for trk in reversed(self._trackers):
             i -= 1
             if (trk.time_since_update > self._max_age):
+                bbox = trk.get_last_state()[0]
                 localIDs_end.append([trk.id, trk.basket_count, trk.basket_time, trk.sig1_start_time, trk.sig1_end_time,
                                      trk.sig2_start_time, trk.sig2_end_time, self._timestamp])
+                end_trackers.append([bbox[0], bbox[1], bbox[2], bbox[3], self._timestamp, trk.id])
                 self._trackers.pop(i)
 
         if (len(res) > 0):
-            return res, localIDs_end
-        return np.empty((0, 13)), localIDs_end
+            return res, localIDs_end, end_trackers
+        return np.empty((0, 13)), localIDs_end, end_trackers
 
     def associate_basket2trackers(self, baskets):
         # get locations from existing trackers.
@@ -180,8 +162,8 @@ class Tracker(TrackerBase):
                 self._trackers[t[1]].basket_time = self._timestamp
             self._trackers[t[1]].basket_count += 1
             baskets[t[0], -1] = self._trackers[t[1]].id
-        for t in unmatched_dets:
-            baskets[t, -1] = -1     # basket not assigned has id = -1
+        # for t in unmatched_dets:
+        #     baskets[t, -1] = -1     # basket not assigned has id = -1
 
 class SignageTracker(TrackerBase):
     """
@@ -233,7 +215,7 @@ class SignageTracker(TrackerBase):
         res = np.zeros((len(dets), 6))
         # update matched trackers with assigned detections
         for d, t in matched:
-            self._trackers[t].update(dets[d], self._min_hits)
+            self._trackers[t].update(dets[d], self._min_hits, is_reid=False)
             res[d, 0:4] = dets[d, 0:-1]
             res[d, -1] = self._trackers[t].id
             res[d, -2] = self._timestamp

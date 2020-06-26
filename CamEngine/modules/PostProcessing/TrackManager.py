@@ -1,5 +1,6 @@
 from .ConcatTracker import ConcatTracker
 from .Matching import Matching
+from shapely.geometry import Point
 import numpy as np
 
 class TrackManager(object):
@@ -8,7 +9,7 @@ class TrackManager(object):
         self.tracks = {}
         self._vectorizer = vectorizer
 
-    def update(self, img, trackers):
+    def update(self, img, trackers, end_trackers):
         for trk in trackers:
             if trk[-1] < 1: continue
             track_id = int(trk[-1])
@@ -22,6 +23,14 @@ class TrackManager(object):
                 self.tracks[track_id] = ConcatTracker(track_id, img_obj, event_name=event_name, vectorizer=self._vectorizer)
             else:
                 track.add_image(img_obj, event_name=event_name, vectorizer=self._vectorizer)
+        for trk in end_trackers:
+            if trk[-1] < 1: continue
+            track_id = int(trk[-1])
+            img_obj = {'data': img[int(trk[1]):int(trk[3]), int(trk[0]):int(trk[2])], 'timestamp': trk[-2] - 0.2,
+                       'center': np.array(((trk[0] + trk[2]) / 2, (trk[1] + trk[3]) / 2))}
+            self.tracks[track_id].update_dead_track(img_obj, vectorizer=self._vectorizer)
+
+        # self.remove_completed_track()
 
     def post_processing(self):
         # Do no process non-fragmented tracks
@@ -103,6 +112,7 @@ class TrackManager(object):
 
         for track_id in to_del:
             del matched_tracks[track_id]
+
         for track_id in completed_tracks: self.remove_track(track_id)
 
         print('----- Matched track -----')
@@ -116,6 +126,15 @@ class TrackManager(object):
 
     def get_tracks(self):
         return self.tracks
+
+    def get_dead_tracks(self, anchor_time, interruption_threshold=10, reid_area=None):
+        dead_tracks = {}
+        for track_id, track in self.tracks.items():
+            if anchor_time - track.end_time > interruption_threshold: continue
+            if (track.is_dead_track()) and (not track.is_exit_track()):
+                if (reid_area is not None) and (not reid_area.contains(Point(track.end_point))): continue
+                dead_tracks[track_id] = track
+        return dead_tracks
 
     def remove_track(self, track_id):
         del self.tracks[track_id]

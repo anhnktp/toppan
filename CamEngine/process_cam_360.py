@@ -1,11 +1,11 @@
 import time
 import cv2
 import ast
-import numpy as np
 from shapely.geometry.polygon import Polygon
 # from modules.Detection.Detector_ssd import PersonDetector
 from modules.Detection.Detector_blitznet import PersonDetector
 # from modules.Detection.Detector_yolov3 import PersonDetector
+# from modules.Detection.Detector_yolov5 import PersonDetector
 from modules.Tracking import Tracker
 from modules.EventDetection import EventDetector
 from modules.Visualization import Visualizer
@@ -26,6 +26,7 @@ def process_cam_360(cam360_queue, num_loaded_model):
     out_door_area = Polygon(ast.literal_eval(os.getenv('OUT_DOOR_AREA')))
     shelf_a_area = Polygon(ast.literal_eval(os.getenv('A_AREA')))
     shelf_b_area = Polygon(ast.literal_eval(os.getenv('B_AREA')))
+    reid_area = Polygon(ast.literal_eval(os.getenv('REID_AREA')))
     signage1_area = Polygon(ast.literal_eval(os.getenv('SIGNAGE1_AREA')))
     signage2_area = Polygon(ast.literal_eval(os.getenv('SIGNAGE2_AREA')))
     none_area = Polygon(ast.literal_eval(os.getenv('NONE_AREA')))
@@ -56,6 +57,9 @@ def process_cam_360(cam360_queue, num_loaded_model):
 
     # Use SSD detection
     # detector = PersonDetector()
+
+    # Use YoloV5 detection
+    # detector = PersonDetector(os.getenv('CAM_360_GPU'), ckpt_path=os.getenv('YOLOv5_MODEL_PATH'), cls_names=os.getenv('CLS_PATH'), augment=False)
 
     detector.setROI(roi_x1y1, roi_x2y2)
 
@@ -125,14 +129,15 @@ def process_cam_360(cam360_queue, num_loaded_model):
 
         # Get Tracking result
         tracker.setTimestamp(cur_time)
-        trackers, localIDs_end = tracker.update(dets, basket_dets, in_door_area, out_door_area, shelf_a_area,
-                                                shelf_b_area, none_area, signage1_area, signage2_area)
+        tracker.setFrame(img_ori)
+        trackers, localIDs_end, end_trackers = tracker.update(dets, basket_dets, in_door_area, out_door_area, shelf_a_area,
+                                                shelf_b_area, none_area, signage1_area, signage2_area, reid_area, track_manager)
 
         # Update event detection results
         event_detector.update_fish_eye(trackers, localIDs_end, csv_writer)
 
         # Update track_manger
-        track_manager.update(img_ori, trackers)
+        track_manager.update(img_ori, trackers, end_trackers)
 
         # Combine touch CSV
         if (index_touch < len(csv_shelf_touch)) and (csv_shelf_touch['timestamp'][index_touch] <= cur_time):
@@ -159,13 +164,14 @@ def process_cam_360(cam360_queue, num_loaded_model):
             else: wait_frames += 1
 
         # Visualization: plot bounding boxes & trajectories
-        # draw_polygon(img_ori, ast.literal_eval(os.getenv('SIGNAGE2_AREA')))
-        # draw_polygon(img_ori, ast.literal_eval(os.getenv('SIGNAGE1_AREA')))
+        # draw_polygon(img_ori, ast.literal_eval(os.getenv('SHELF_IDS_XY')))
+        draw_polygon(img_ori, ast.literal_eval(os.getenv('A_AREA')))
+        draw_polygon(img_ori, ast.literal_eval(os.getenv('B_AREA')))
         visualizer.draw_fish_eye(img_ori, basket_dets, trackers, event_detector)
 
         # Display the resulting frame
-        # cv2.putText(img_ori, 'Frame #{:d} ({:.2f}ms)'.format(frame_cnt, (time.time() - start_time) * 1000), (2, 35),
-        #             0, fontScale=0.6, color=(0, 255, 0), thickness=2)
+        cv2.putText(img_ori, 'Frame #{:d} ({:.2f}ms)'.format(frame_cnt, (time.time() - start_time) * 1000), (2, 35),
+                    0, fontScale=0.6, color=(0, 255, 0), thickness=2)
         # cv2.putText(img_ori, '{}'.format(convert_timestamp_to_human_time(cur_time)), (2, 305),
         #             0, fontScale=0.6, color=(0, 255, 0), thickness=2)
         if is_show: visualizer.show(img=img_ori, title='Fish-eye camera Detection and Tracking Python Demo')

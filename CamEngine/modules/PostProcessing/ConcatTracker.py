@@ -4,7 +4,7 @@ class ConcatTracker(object):
 
     def __init__(self, track_id, img_obj, event_name=None, vectorizer=None):
         self.start_time = img_obj['timestamp']
-        self.end_time = img_obj['timestamp']
+        self.end_time = -1          # Not dead
         self.start_point = img_obj['center']
         self.end_point = img_obj['center']
         self.track_id = track_id
@@ -16,15 +16,25 @@ class ConcatTracker(object):
             self._events[event_name] = img_obj['timestamp']
         if vectorizer:
             self.images.append(img_obj['data'])
-            # self._embeddings.append(vectorizer.predict(img_obj['data']))
 
     def add_image(self, img_obj, event_name=None, vectorizer=None):
-        self.end_time = img_obj['timestamp']
+        # self.end_time = img_obj['timestamp']
         self.end_point = img_obj['center']
         if event_name and (event_name not in self._events):
             self._events[event_name] = img_obj['timestamp']
         if vectorizer:
-            # self._embeddings.append(vectorizer.predict(img_obj['data']))
+            self.images.append(img_obj['data'])
+
+    def update_dead_track(self, img_obj, vectorizer=None):
+        self.end_time = img_obj['timestamp']
+        self.end_point = img_obj['center']
+        if vectorizer:
+            self.images.append(img_obj['data'])
+
+    def recover_track(self, img_obj, vectorizer=None):
+        self.end_time = -1
+        self.end_point = img_obj['center']
+        if vectorizer:
             self.images.append(img_obj['data'])
 
     def is_enter_track(self):
@@ -32,6 +42,12 @@ class ConcatTracker(object):
 
     def is_tail_track(self):
         return (len(self._events) == 0) or ('EXIT' in self._events)
+
+    def is_dead_track(self):
+        return (self.end_time > 0)
+
+    def is_alive_track(self):
+        return (self.end_time == -1)
 
     def is_exit_track(self):
         return ('EXIT' in self._events)

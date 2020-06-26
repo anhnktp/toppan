@@ -1,6 +1,7 @@
 from filterpy.kalman import KalmanFilter
 from helpers.bbox_utils import *
-
+from shapely.geometry import Point
+from modules.PostProcessing.Matching import Matching
 
 class KalmanBoxTracker(object):
     """
@@ -57,7 +58,7 @@ class KalmanBoxTracker(object):
 
         self.sig_start_bbox = bbox[:4]
  
-    def update(self, bbox, min_hits):
+    def update(self, bbox, min_hits, timestamp=None, reid_area=None, track_manager=None, img=None, is_reid=False):
         """
         Updates the state vector with observed bbox.
         """
@@ -67,7 +68,21 @@ class KalmanBoxTracker(object):
         self.hit_streak += 1
         self.kf.update(convert_bbox_to_z(bbox))
         # new local_id then return True, otherwise return False
-        if (self.id == -1) and (self.hit_streak > min_hits):    # ENTER
+        if (self.id == -1) and (self.hit_streak > min_hits):
+            # Check if bbox in reid are:
+            if is_reid:
+                center_tup = (bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2
+                center_point = Point(center_tup)
+                if reid_area.contains(center_point):
+                    # dead_tracks = sorted(track_manager.get_dead_tracks(interruption_threshold=10).values(), key=lambda t: t.start_time)
+                    dead_tracks = track_manager.get_dead_tracks(anchor_time=timestamp, interruption_threshold=10, reid_area=reid_area).values()
+                    matched_id = Matching.match_real_time(bbox, timestamp, dead_tracks)
+                    if matched_id is not None:
+                        img_obj = {'data': img[int(bbox[1]):int(bbox[3]), int(bbox[0]):int(bbox[2])], 'timestamp': timestamp,
+                                   'center': np.array(center_tup)}
+                        track_manager.tracks[matched_id].recover_track(img_obj, track_manager._vectorizer)
+                        self.id = matched_id
+                        return False
             KalmanBoxTracker.count += 1
             self.id = KalmanBoxTracker.count
             return True
@@ -93,7 +108,7 @@ class KalmanBoxTracker(object):
         """
         return convert_x_to_bbox(self.kf.x)
 
-    def get_last_state(self, max_age):
+    def get_last_state(self, max_age=1):
         """
         Returns the last-maxage bounding box estimate before track is removed
         """

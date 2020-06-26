@@ -5,6 +5,7 @@ class EventDetector(object):
     def __init__(self, BASKET_FREQ=20):
         super(EventDetector, self).__init__()
         self.basket_freq = BASKET_FREQ
+        self.local_id_end = []
 
     def update_fish_eye(self, trackers, localIDs_end, csv_writer):
         self.detect_area(trackers, csv_writer)
@@ -45,12 +46,14 @@ class EventDetector(object):
     def detect_has_basket(self, localIDs_end, csv_writer):
         for local_id, basket_cnt, basket_time, _, _, _, _, timestamp in localIDs_end:
             if local_id < 0: continue
+            if local_id in self.local_id_end: continue
             if basket_cnt > self.basket_freq:
                 csv_writer.write(
                     (1, local_id, 1202, 'HAS BASKET', basket_time, convert_timestamp_to_human_time(basket_time)))
             else:
                 csv_writer.write(
                     (1, local_id, 1202, 'NO BASKET', timestamp, convert_timestamp_to_human_time(timestamp)))
+            self.local_id_end.append(local_id)
 
     def detect_attention(self, localIDs_end, csv_writer):
         """
@@ -72,7 +75,7 @@ class EventDetector(object):
     def detect_in_signages(self, localIDs_end, csv_writer):
         for items in localIDs_end:
             local_id = items[0]
-            if local_id < 0: continue
+            if local_id < 1: continue
             sig1_start_time = items[3]
             sig1_end_time = items[4]
             sig2_start_time = items[5]

@@ -18,6 +18,7 @@ class TrackerBase(object, metaclass=ABCMeta):
         @   time_stamp: the timestamp correspond frame_id, frame_data from cam_id
         """
         self._timestamp = None
+        self._frame_data = None
 
     def setTimestamp(self, timestamp):
         """
@@ -27,6 +28,25 @@ class TrackerBase(object, metaclass=ABCMeta):
         @return: void
         """
         self._timestamp = timestamp
+
+    def setFrame(self, frame_data):
+        """
+        @Set new frame
+        @parameters
+        @   frame_id: the id of frame image (ex: frame_001)
+        @   frame_data: the source of frame image, it maybe base64encoded or vector matrix encoded
+        @return: void
+        """
+        self._frame_data = frame_data
+
+    @property
+    def frame_data(self):
+        """
+        @Get the timestamp of self.__frame_id & self.__frame_data from cam_id
+        @return:
+            timestamp: the timestamp correspond frame_id, frame_data from cam_id
+        """
+        return self._frame_data
 
     @property
     def time_stamp(self):

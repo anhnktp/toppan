@@ -68,7 +68,7 @@ class Matching(object):
             print('--------------')
             for j in tail_tracks:
                 if (track.is_exit_track()) or (track.is_completed_track()): break
-                if (not track.is_exit_track()) and (not tracks[j].is_enter_track()) and (track.end_time < tracks[j].start_time) \
+                if (not tracks[j].is_enter_track()) and (track.end_time < tracks[j].start_time) \
                         and (tracks[j].start_time - track.end_time < interruption_threshold):
                     print('>>> Candidate track {} has distance time: {}'.format(tracks[j].track_id, tracks[j].start_time - track.end_time))
                     track.concat_track(tracks[j])
@@ -91,7 +91,6 @@ class Matching(object):
             concated_id = []
             print('Start matching for track {}...'.format(track.track_id))
             tail_tracks = sorted(range(1, len(tracks)), key=lambda t: tracks[t].start_time)
-
             while True:
                 min_dist = sys.maxsize
                 candidate = None
@@ -136,7 +135,7 @@ class Matching(object):
                 if (track.is_exit_track()) or (track.is_completed_track()): break
                 print('--------------')
                 for j in tail_tracks:
-                    if (not track.is_exit_track()) and (not tracks[j].is_enter_track()) and (track.end_time < tracks[j].start_time) \
+                    if (not tracks[j].is_enter_track()) and (track.end_time < tracks[j].start_time) \
                             and (tracks[j].start_time - track.end_time < interruption_threshold):
                         print('>>> Candidate track {} has distance time: {}'.format(tracks[j].track_id,
                                                                                     tracks[j].start_time - track.end_time))
@@ -200,3 +199,15 @@ class Matching(object):
             for t in reversed(to_del): tracks.pop(t)
 
         return matched_tracks
+
+    @staticmethod
+    def match_real_time(bbox, timestamp, dead_tracks):
+        center_point = np.array(((bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2))
+        min_dist = sys.maxsize
+        matched_id = None
+        for trk in dead_tracks:
+            dist = np.linalg.norm(center_point - trk.end_point)
+            if dist < min_dist:
+                min_dist = dist
+                matched_id = trk.track_id
+        return matched_id
