@@ -21,7 +21,7 @@ def process_cam_signage(cam_signage_queue, num_loaded_model):
     # Config parameters
     roi_x1y1, roi_x2y2 = ast.literal_eval(os.getenv('ROI_CAM_SIGNAGE'))[0], ast.literal_eval(os.getenv('ROI_CAM_SIGNAGE'))[1]
     img_size_cam_signage = ast.literal_eval(os.getenv('IMG_SIZE_CAM_SIGNAGE'))
-    signage1_enter_area = Polygon(ast.literal_eval(os.getenv('SIGNAGE1_ENTER_AREA')))
+    signage_enter_area = Polygon(ast.literal_eval(os.getenv('SIGNAGE_ENTER_AREA')))
 
     # Get cam signage id
     cam_id = update_camera_id(os.getenv('RTSP_CAM_SIGNAGE'))
@@ -142,7 +142,7 @@ def process_cam_signage(cam_signage_queue, num_loaded_model):
 
     # Post Processing Camera Signage
     post_processing_signage_csv(input_csv=os.getenv('CSV_CAM_SIGNAGE_{:02}'.format(cam_id)),
-                                output_csv=os.getenv('PROCESSED_CSV_SIGNAGE_{:02}_PATH'.format(cam_id)), signage_enter_area=signage1_enter_area)
+                                output_csv=os.getenv('PROCESSED_CSV_SIGNAGE_{:02}_PATH'.format(cam_id)), signage_enter_area=signage_enter_area)
     engine_logger.info('Created successfully CSV file of CAM_Signage !')
 
     engine_logger.critical('------ CAM_Signage Engine process stopped ------')
