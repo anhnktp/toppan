@@ -16,11 +16,10 @@ def find_area(bbox, in_door_box, out_door_box, a_box, b_box, sig1_box, sig2_box)
     # Check if a track is in the singage FoV
     is_in_sig1_area = sig1_box.contains(center_point)
     is_in_sig2_area = sig2_box.contains(center_point)
+
     if out_door_box.contains(bottom_left_point) or out_door_box.contains(top_left_point):
-    # if out_door_box.contains(bottom_left_point):
         return 'OUT_DOOR_AREA', is_in_sig1_area, is_in_sig2_area
     if in_door_box.contains(bottom_left_point) or in_door_box.contains(top_left_point):
-    # if in_door_box.contains(bottom_left_point):
         return 'IN_DOOR_AREA', is_in_sig1_area, is_in_sig2_area
     if a_box.contains(center_point):
         return 'A_AREA', is_in_sig1_area, is_in_sig2_area
@@ -62,8 +61,6 @@ class Tracker(TrackerBase):
         to_del = []
         for t, trk in enumerate(trks):
             pos = self._trackers[t].predict()[0]
-            if self._trackers[t].id == 2:
-                print(self._trackers[t].area)
             trk[:] = [pos[0], pos[1], pos[2], pos[3]]
             if (np.any(np.isnan(pos))):
                 to_del.append(t)
@@ -121,7 +118,28 @@ class Tracker(TrackerBase):
             res[i, -7] = trk.sig1_end_time
             res[i, -8] = trk.sig2_start_time
             res[i, -9] = trk.sig2_end_time
-            res[i, -5] = -1  # -1 = None move to special area
+            bbox = dets[i, 0:-1]
+            area, is_in_sig1_area, is_in_sig2_area = find_area(bbox, in_door_box, out_door_box, a_box, b_box, sig1_box,
+                                                               sig2_box)
+
+            if is_in_sig1_area:
+                if trk.sig1_start_time is None:
+                    trk.sig1_start_time = self._timestamp
+                trk.sig1_end_time = self._timestamp
+
+            if is_in_sig2_area:
+                if trk.sig2_start_time is None:
+                    trk.sig2_start_time = self._timestamp
+                trk.sig2_end_time = self._timestamp
+
+            if (area is not None) and (trk.area != area):
+                if (trk.area == 'OUT_DOOR_AREA') and (area == 'IN_DOOR_AREA'): res[i, -5] = 1  # 1 = ENTER
+                if (trk.area == 'IN_DOOR_AREA') and (area == 'OUT_DOOR_AREA'): res[i, -5] = 2  # 2 = EXIT
+                if (area == 'A_AREA'): res[i, -5] = 3  # 3 = A
+                if (area == 'B_AREA'): res[i, -5] = 4  # 4 = B
+                trk.area = area
+            else:
+                res[i, -5] = -1  # -1 = None move to special area
 
         # Update basket to existing tracks
         self.associate_basket2trackers(baskets)
@@ -162,14 +180,17 @@ class Tracker(TrackerBase):
                 self._trackers[t[1]].basket_time = self._timestamp
             self._trackers[t[1]].basket_count += 1
             baskets[t[0], -1] = self._trackers[t[1]].id
-        # for t in unmatched_dets:
-        #     baskets[t, -1] = -1     # basket not assigned has id = -1
+        for t in unmatched_dets:
+            baskets[t, -1] = -1     # basket not assigned has id = -1
+
 
 class SignageTracker(TrackerBase):
     """
        Using SORT Tracking
     """
-    def __init__(self, max_age=20, min_hits=5, low_iou_threshold=0.25, min_area_ratio=0.5, max_area_ratio=1.5, min_area_freq=10):
+
+    def __init__(self, max_age=20, min_hits=5, low_iou_threshold=0.25, min_area_ratio=0.5, max_area_ratio=1.5,
+                 min_area_freq=10):
         """
         Sets key parameters for SORT
         """
@@ -215,7 +236,7 @@ class SignageTracker(TrackerBase):
         res = np.zeros((len(dets), 6))
         # update matched trackers with assigned detections
         for d, t in matched:
-            self._trackers[t].update(dets[d], self._min_hits, is_reid=False)
+            self._trackers[t].update(dets[d], self._min_hits)
             res[d, 0:4] = dets[d, 0:-1]
             res[d, -1] = self._trackers[t].id
             res[d, -2] = self._timestamp
@@ -234,7 +255,7 @@ class SignageTracker(TrackerBase):
         # Update accompany people to existing tracks
         self.count_accompany_ppl2trackers(res)
 
-        # check the attention 
+        # check the attention
         self.check_attention(headpose_Detector, tracked_faces, frame)
 
         # remove dead tracklet
@@ -247,26 +268,45 @@ class SignageTracker(TrackerBase):
                 ppl_accompany = ppl_accompany[ppl_accompany > self._min_area_freq]
 
                 # check no attention + calculate the duration
-                if len(trk.duration_hp_list) != 0:
+                if len(trk.duration_hp_list) != 0 or trk.cnt_frame_attention > 0:
                     duration_group = calculate_duration(trk.basket_time, self._timestamp)
+                    duration_attention = trk.duration_hp_list if len(trk.duration_hp_list) != 0 else (
+                        str(trk.cnt_frame_attention / int(os.getenv('FPS_CAM_SIGNAGE'))))
+                    if (isinstance(duration_attention, str)):
+                        trk.duration_hp_list.append(duration_attention)
+                        trk.end_hp_list.append(self._timestamp)
                     # *IMPORTANT NOTE: basket_time: the first time the person appears in the video, just re-use
+                    x2_center = int((min(max(trk.get_last_state(-1)[0][0], 0),
+                                         ast.literal_eval(os.getenv('IMG_SIZE_CAM_SIGNAGE'))[0]) +
+                                     min(max(trk.get_last_state(-1)[0][2], 0),
+                                         ast.literal_eval(os.getenv('IMG_SIZE_CAM_SIGNAGE'))[0])) / 2)
+                    y2_center = int((min(max(trk.get_last_state(-1)[0][1], 0),
+                                         ast.literal_eval(os.getenv('IMG_SIZE_CAM_SIGNAGE'))[0]) +
+                                     min(max(trk.get_last_state(-1)[0][3], 0),
+                                         ast.literal_eval(os.getenv('IMG_SIZE_CAM_SIGNAGE'))[0])) / 2)
+
                     localIDs_end.append([trk.id, len(ppl_accompany), trk.basket_time, self._timestamp, 'has_attention',
                                          trk.start_hp_list, trk.duration_hp_list, duration_group, trk.end_hp_list,
-                                         trk.sig_start_bbox[0], trk.sig_start_bbox[2],
-                                         int(min(max(trk.get_last_state(-1)[0][0], 0),
-                                                 ast.literal_eval(os.getenv('IMG_SIZE_CAM_SIGNAGE'))[0])),
-                                         int(min(max(trk.get_last_state(-1)[0][2], 0),
-                                                 ast.literal_eval(os.getenv('IMG_SIZE_CAM_SIGNAGE'))[0]))])
+                                         int((trk.sig_start_bbox[0] + trk.sig_start_bbox[2]) / 2),
+                                         int((trk.sig_start_bbox[1] + trk.sig_start_bbox[3]) / 2),
+                                         x2_center, y2_center])
                 else:
                     duration_attention = 'None'
                     duration_group = calculate_duration(trk.basket_time, self._timestamp)
+                    x2_center = int((min(max(trk.get_last_state(-1)[0][0], 0),
+                                         ast.literal_eval(os.getenv('IMG_SIZE_CAM_SIGNAGE'))[0]) +
+                                     min(max(trk.get_last_state(-1)[0][2], 0),
+                                         ast.literal_eval(os.getenv('IMG_SIZE_CAM_SIGNAGE'))[0])) / 2)
+                    y2_center = int((min(max(trk.get_last_state(-1)[0][1], 0),
+                                         ast.literal_eval(os.getenv('IMG_SIZE_CAM_SIGNAGE'))[0]) +
+                                     min(max(trk.get_last_state(-1)[0][3], 0),
+                                         ast.literal_eval(os.getenv('IMG_SIZE_CAM_SIGNAGE'))[0])) / 2)
                     localIDs_end.append([trk.id, len(ppl_accompany), trk.basket_time, self._timestamp, 'no', 'None',
-                                         duration_attention, duration_group, 'None', trk.sig_start_bbox[0],
-                                         trk.sig_start_bbox[2],
-                                         int(min(max(trk.get_last_state(-1)[0][0], 0),
-                                                 ast.literal_eval(os.getenv('IMG_SIZE_CAM_SIGNAGE'))[0])),
-                                         int(min(max(trk.get_last_state(-1)[0][2], 0),
-                                                 ast.literal_eval(os.getenv('IMG_SIZE_CAM_SIGNAGE'))[0]))])
+                                         duration_attention, duration_group, 'None',
+                                         int((trk.sig_start_bbox[0] + trk.sig_start_bbox[2]) / 2),
+                                         int((trk.sig_start_bbox[1] + trk.sig_start_bbox[3]) / 2), x2_center,
+                                         y2_center])
+
                 self._trackers.pop(i)
 
         if (len(res) > 0):
@@ -302,17 +342,17 @@ class SignageTracker(TrackerBase):
 
         return faces
 
-    def is_valid_headpose(self,yaw,pitch,roll):
+    def is_valid_headpose(self, yaw, pitch, roll):
         """
             Check the head pose condition based on 3 angles
         """
-        if ((yaw > -20.5) & (yaw <20.5) & (roll > -20.5) & (roll < 20.5)):
+        if ((yaw > -20.5) & (yaw < 20.5) & (roll > -20.5) & (roll < 20.5)):
             return True
         return False
 
     def check_attention(self, detector, faces, frame):
         """
-            Signage Camera 1: Check the headpose angles 
+            Signage Camera 1: Check the headpose angles
             Signage Camera 2: if the face appeared in the frame, immediately consider it as 'has_attention'. No check headpose angles
 
             Args:
@@ -336,7 +376,8 @@ class SignageTracker(TrackerBase):
 
                 if (os.getenv('SIGNAGE_ID') == '1' and self.is_valid_headpose(yaw, pitch, roll)) or (
                         os.getenv('SIGNAGE_ID') == '2'):
-                    if self._trackers[index].hp_max_age > 0 and self._trackers[index].hp_max_age < int(os.getenv('MAX_AGE_HP')):
+                    if self._trackers[index].hp_max_age > 0 and self._trackers[index].hp_max_age < int(
+                            os.getenv('MAX_AGE_HP')):
                         self._trackers[index].hp_max_age = 0
                     if self._trackers[index].cnt_frame_attention == 0:
                         self._trackers[index].attention = True

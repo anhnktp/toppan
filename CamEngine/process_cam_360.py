@@ -5,7 +5,6 @@ from shapely.geometry.polygon import Polygon
 # from modules.Detection.Detector_ssd import PersonDetector
 from modules.Detection.Detector_blitznet import PersonDetector
 # from modules.Detection.Detector_yolov3 import PersonDetector
-# from modules.Detection.Detector_yolov5 import PersonDetector
 from modules.Tracking import Tracker
 from modules.EventDetection import EventDetector
 from modules.Visualization import Visualizer
@@ -57,9 +56,6 @@ def process_cam_360(cam360_queue, num_loaded_model):
 
     # Use SSD detection
     # detector = PersonDetector()
-
-    # Use YoloV5 detection
-    # detector = PersonDetector(os.getenv('CAM_360_GPU'), ckpt_path=os.getenv('YOLOv5_MODEL_PATH'), cls_names=os.getenv('CLS_PATH'), augment=False)
 
     detector.setROI(roi_x1y1, roi_x2y2)
 
@@ -164,7 +160,6 @@ def process_cam_360(cam360_queue, num_loaded_model):
             else: wait_frames += 1
 
         # Visualization: plot bounding boxes & trajectories
-        # draw_polygon(img_ori, ast.literal_eval(os.getenv('SHELF_IDS_XY')))
         draw_polygon(img_ori, ast.literal_eval(os.getenv('A_AREA')))
         draw_polygon(img_ori, ast.literal_eval(os.getenv('B_AREA')))
         visualizer.draw_fish_eye(img_ori, basket_dets, trackers, event_detector)

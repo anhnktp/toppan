@@ -3,23 +3,26 @@ import cv2
 import ast
 import numpy as np
 from shapely.geometry.polygon import Polygon
-from modules.Detection.Detector_yolov3 import PersonDetector
+# from modules.Detection.Detector_yolov3 import PersonDetector
+from modules.Detection.Detector_yolov5 import PersonFaceDetector
 from modules.Tracking import SignageTracker
 from modules.EventDetection import EventDetector
 from modules.Visualization import Visualizer
 from helpers.settings import *
 from helpers.time_utils import get_timestamp_from_filename, convert_timestamp_to_human_time
-from helpers.common_utils import CSV_Writer, draw_polygon, post_processing_signage_csv, calculate_duration, update_camera_id
+from helpers.common_utils import CSV_Writer, draw_polygon, post_processing_signage_csv, calculate_duration, \
+    update_camera_id
 from modules.Headpose.Detector_headpose import HeadposeDetector
 
 
 def process_cam_signage(cam_signage_queue, num_loaded_model):
-
     engine_logger.critical('------ CAM_SIGNAGE Engine process started ------')
 
     # Config parameters
-    roi_x1y1, roi_x2y2 = ast.literal_eval(os.getenv('ROI_CAM_SIGNAGE'))[0], ast.literal_eval(os.getenv('ROI_CAM_SIGNAGE'))[1]
+    roi_x1y1, roi_x2y2 = ast.literal_eval(os.getenv('ROI_CAM_SIGNAGE'))[0], \
+                         ast.literal_eval(os.getenv('ROI_CAM_SIGNAGE'))[1]
     img_size_cam_signage = ast.literal_eval(os.getenv('IMG_SIZE_CAM_SIGNAGE'))
+    signage1_enter_area = Polygon(ast.literal_eval(os.getenv('SIGNAGE1_ENTER_AREA')))
 
     # Get cam signage id
     cam_id = update_camera_id(os.getenv('RTSP_CAM_SIGNAGE'))
@@ -32,8 +35,8 @@ def process_cam_signage(cam_signage_queue, num_loaded_model):
 
     # Create list to store data in csv
     column_name = ['camera ID', 'shopper ID', 'process ID', 'info', 'Start_time',
-                   'End_time', 'Duration(s)', 'Start_bbox_xmin', 'Start_bbox_xmax', 'End_bbox_xmin',
-                   'End_bbox_xmax']
+                   'End_time', 'Duration(s)', 'Start_bbox_x', 'Start_bbox_y', 'End_bbox_x',
+                   'End_bbox_y']
     csv_writer = CSV_Writer(column_name, os.getenv('CSV_CAM_SIGNAGE_{:02}'.format(cam_id)))
 
     # Create instance of Visualizer
@@ -41,18 +44,20 @@ def process_cam_signage(cam_signage_queue, num_loaded_model):
     is_show = os.getenv('SHOW_GUI_360') == 'TRUE'
 
     # Create instance of PersonDetector
-    detector = PersonDetector(os.getenv('CAM_360_GPU'), os.getenv('YOLOv3_SIGNAGE_CFG_PATH'), ckpt_path=os.getenv('YOLOv3_SIGNAGE_MODEL_PATH'),
-                              cls_names=os.getenv('CLS_SIGNAGE_PATH'), augment=False)
+    # detector = PersonDetector(os.getenv('CAM_360_GPU'), os.getenv('YOLOv3_SIGNAGE_CFG_PATH'), ckpt_path=os.getenv('YOLOv3_SIGNAGE_MODEL_PATH'),
+    #                           cls_names=os.getenv('CLS_SIGNAGE_PATH'), augment=False)
 
+    detector = PersonFaceDetector(os.getenv('CAM_360_GPU'), os.getenv('YOLOv3_SIGNAGE_CFG_PATH'),
+                                  ckpt_path=os.getenv('YOLOv3_SIGNAGE_MODEL_PATH'), augment=False)
     detector.setROI(roi_x1y1, roi_x2y2)
-
 
     # Create instance of HeadposeDetector
     hpDetector = HeadposeDetector(os.getenv('HEADPOSE_MODEL_PATH'))
 
     # Create instance of Tracker
-    tracker = SignageTracker(int(os.getenv('MAX_AGE')), int(os.getenv('MIN_HITS')), float(os.getenv('LOW_IOU_THRESHOLD')), float(os.getenv('MIN_AREA_RATIO')), 
-                                float(os.getenv('MAX_AREA_RATIO')), int(os.getenv('MIN_AREA_FREQ')))
+    tracker = SignageTracker(int(os.getenv('MAX_AGE')), int(os.getenv('MIN_HITS')),
+                             float(os.getenv('LOW_IOU_THRESHOLD')), float(os.getenv('MIN_AREA_RATIO')),
+                             float(os.getenv('MAX_AREA_RATIO')), int(os.getenv('MIN_AREA_FREQ')))
 
     # Create instance of EventDetector
     event_detector = EventDetector(int(os.getenv('MIN_BASKET_FREQ')))
@@ -94,6 +99,8 @@ def process_cam_signage(cam_signage_queue, num_loaded_model):
 
         visualizer.draw_signage(img_ori, faces, trackers)
 
+        draw_polygon(img_ori, ast.literal_eval(os.getenv('SIGNAGE1_ENTER_AREA')))
+
         # Display the resulting frame
         cv2.putText(img_ori, 'Frame #{:d} ({:.2f}ms)'.format(frame_cnt, (time.time() - start_time) * 1000), (2, 35),
                     0, fontScale=0.6, color=(0, 255, 0), thickness=2)
@@ -119,12 +126,16 @@ def process_cam_signage(cam_signage_queue, num_loaded_model):
         ppl_accompany = ppl_accompany[ppl_accompany > int(os.getenv('MIN_AREA_FREQ'))]
         # change to new format
         duration_group = calculate_duration(trk.basket_time, cur_time)
+        x2_center = int((min(max(trk.get_state()[0][0], 0), img_size_cam_signage[0]) + min(
+            max(trk.get_state()[0][2], 0), img_size_cam_signage[0])) / 2)
+        y2_center = int((min(max(trk.get_state()[0][1], 0), img_size_cam_signage[1]) + min(
+            max(trk.get_state()[0][3], 0), img_size_cam_signage[1])) / 2)
         csv_writer.write((cam_id, trk.id, 1203, 'GROUP {} PEOPLE'.format(len(ppl_accompany) + 1),
                           convert_timestamp_to_human_time(trk.basket_time), convert_timestamp_to_human_time(cur_time),
                           duration_group,
-                          trk.sig_start_bbox[0], trk.sig_start_bbox[2],
-                          int(min(max(trk.get_state()[0][0], 0), img_size_cam_signage[0])),
-                          int(min(max(trk.get_state()[0][2], 0), img_size_cam_signage[0]))))
+                          int((trk.sig_start_bbox[0] + trk.sig_start_bbox[2]) / 2),
+                          int((trk.sig_start_bbox[1] + trk.sig_start_bbox[3]) / 2),
+                          x2_center, y2_center))
 
         if len(trk.duration_hp_list) != 0:
             for start, end, duration in zip(trk.start_hp_list, trk.end_hp_list, trk.duration_hp_list):
@@ -135,7 +146,8 @@ def process_cam_signage(cam_signage_queue, num_loaded_model):
 
     # Post Processing Camera Signage
     post_processing_signage_csv(input_csv=os.getenv('CSV_CAM_SIGNAGE_{:02}'.format(cam_id)),
-                                output_csv=os.getenv('PROCESSED_CSV_SIGNAGE_{:02}_PATH'.format(cam_id)))
-    engine_logger.info('Created successfully CSV file of CAM_Signage !')
+                                output_csv=os.getenv('PROCESSED_CSV_SIGNAGE_{:02}_PATH'.format(cam_id)),
+                                signage_enter_area=signage1_enter_area)
+    engine_logger.info('Created successfully CSV file of CAM_Signage {:02}!'.format(cam_id))
 
     engine_logger.critical('------ CAM_Signage Engine process stopped ------')
