@@ -76,17 +76,17 @@ class KalmanBoxTracker(object):
                 if reid_area.contains(center_point):
                     # dead_tracks = sorted(track_manager.get_dead_tracks(interruption_threshold=10).values(), key=lambda t: t.start_time)
                     dead_tracks = track_manager.get_dead_tracks(anchor_time=timestamp, interruption_threshold=10, reid_area=reid_area).values()
-                    matched_id = Matching.match_real_time(bbox, timestamp, dead_tracks)
+                    matched_id, end_point = Matching.match_real_time(bbox, timestamp, dead_tracks)
                     if matched_id is not None:
                         img_obj = {'data': img[int(bbox[1]):int(bbox[3]), int(bbox[0]):int(bbox[2])], 'timestamp': timestamp,
                                    'center': np.array(center_tup)}
                         track_manager.tracks[matched_id].recover_track(img_obj, track_manager._vectorizer)
                         self.id = matched_id
-                        return False
+                        return True, end_point
             KalmanBoxTracker.count += 1
             self.id = KalmanBoxTracker.count
-            return True
-        return False
+            return False, None
+        return False, None
 
     def predict(self):
         """

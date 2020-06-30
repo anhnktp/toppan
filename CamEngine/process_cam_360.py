@@ -160,8 +160,10 @@ def process_cam_360(cam360_queue, num_loaded_model):
             else: wait_frames += 1
 
         # Visualization: plot bounding boxes & trajectories
-        draw_polygon(img_ori, ast.literal_eval(os.getenv('A_AREA')))
-        draw_polygon(img_ori, ast.literal_eval(os.getenv('B_AREA')))
+        # draw_polygon(img_ori, ast.literal_eval(os.getenv('A_AREA')))
+        # draw_polygon(img_ori, ast.literal_eval(os.getenv('B_AREA')))
+        # draw_polygon(img_ori, ast.literal_eval(os.getenv('IN_DOOR_AREA')))
+        # draw_polygon(img_ori, ast.literal_eval(os.getenv('OUT_DOOR_AREA')))
         visualizer.draw_fish_eye(img_ori, basket_dets, trackers, event_detector)
 
         # Display the resulting frame

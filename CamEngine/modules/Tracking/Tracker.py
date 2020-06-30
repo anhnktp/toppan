@@ -27,6 +27,14 @@ def find_area(bbox, in_door_box, out_door_box, a_box, b_box, sig1_box, sig2_box)
         return 'B_AREA', is_in_sig1_area, is_in_sig2_area
     return None, is_in_sig1_area, is_in_sig2_area
 
+def check_area(point, a_box, b_box):
+    center_point = Point(point)
+    if a_box.contains(center_point):
+        return 'A_AREA'
+    if b_box.contains(center_point):
+        return 'B_AREA'
+    return None
+
 class Tracker(TrackerBase):
     """
        Using SORT Tracking
@@ -72,6 +80,9 @@ class Tracker(TrackerBase):
         res = np.zeros((len(dets), 13))
         # update matched trackers with assigned detections
         for d, t in matched:
+            is_matched_id, end_point = self._trackers[t].update(dets[d], self._min_hits, self._timestamp, reid_area, track_manager, self._frame_data, is_reid=True)
+            if is_matched_id:
+                self._trackers[t].area = check_area(end_point, a_box, b_box)
             area, is_in_sig1_area, is_in_sig2_area = find_area(dets[d, 0:-1], in_door_box, out_door_box, a_box, b_box, sig1_box, sig2_box)
             if (area is not None) and (self._trackers[t].area != area):
                 if (self._trackers[t].area == 'OUT_DOOR_AREA') and (area == 'IN_DOOR_AREA'): res[d, -5] = 1  # 1 = ENTER
@@ -81,7 +92,6 @@ class Tracker(TrackerBase):
                 self._trackers[t].area = area
             else:
                 res[d, -5] = -1  # -1 = None move to special area
-            self._trackers[t].update(dets[d], self._min_hits, self._timestamp, reid_area, track_manager, self._frame_data, is_reid=True)
 
             if is_in_sig1_area:
                 if self._trackers[t].sig1_start_time == None:

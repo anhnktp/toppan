@@ -205,9 +205,11 @@ class Matching(object):
         center_point = np.array(((bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2))
         min_dist = sys.maxsize
         matched_id = None
+        end_point = None
         for trk in dead_tracks:
             dist = np.linalg.norm(center_point - trk.end_point)
             if dist < min_dist:
                 min_dist = dist
                 matched_id = trk.track_id
-        return matched_id
+                end_point = trk.end_point
+        return matched_id, end_point
