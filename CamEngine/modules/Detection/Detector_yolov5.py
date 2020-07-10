@@ -1,5 +1,4 @@
 import sys
-
 sys.path.insert(0, 'modules/Detection/yolov5')
 from .DetectorBase import DetectorBase
 from .yolov5.models.yolo import Model
@@ -81,9 +80,7 @@ class PersonFaceDetector(DetectorBase):
         torch.backends.cudnn.benchmark = True
         self.device = torch_utils.select_device(device)
         self.augment = augment
-
         self.model = torch.load(ckpt_path, map_location=self.device)['model'].float()
-
         self.model.to(self.device).eval()
         self.conf_thres = float(os.getenv('SCORE_THRESHOLD'))
         self.iou_thres = float(os.getenv('NMS_THRESHOLD'))

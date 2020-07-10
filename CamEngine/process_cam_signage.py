@@ -10,8 +10,7 @@ from modules.EventDetection import EventDetector
 from modules.Visualization import Visualizer
 from helpers.settings import *
 from helpers.time_utils import get_timestamp_from_filename, convert_timestamp_to_human_time
-from helpers.common_utils import CSV_Writer, draw_polygon, post_processing_signage_csv, calculate_duration, \
-    update_camera_id
+from helpers.common_utils import CSV_Writer, draw_polygon, post_processing_signage_csv, calculate_duration, update_camera_id
 from modules.Headpose.Detector_headpose import HeadposeDetector
 
 
@@ -50,7 +49,6 @@ def process_cam_signage(cam_signage_queue, num_loaded_model):
     detector = PersonFaceDetector(os.getenv('CAM_360_GPU'), os.getenv('YOLOv3_SIGNAGE_CFG_PATH'),
                                   ckpt_path=os.getenv('YOLOv3_SIGNAGE_MODEL_PATH'), augment=False)
     detector.setROI(roi_x1y1, roi_x2y2)
-
     # Create instance of HeadposeDetector
     hpDetector = HeadposeDetector(os.getenv('HEADPOSE_MODEL_PATH'))
 

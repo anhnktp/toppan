@@ -35,18 +35,7 @@ ENV AWL_DIR=/awl/cam_engine
 
 WORKDIR ${AWL_DIR}
 USER ${USER}
-
-RUN pip install --user 'git+https://github.com/cocodataset/cocoapi.git#subdirectory=PythonAPI'
-RUN pip install --user 'git+https://github.com/facebookresearch/fvcore'
-ENV FORCE_CUDA="1"
-ENV TORCH_CUDA_ARCH_LIST="Kepler;Kepler+Tesla;Maxwell;Maxwell+Tegra;Pascal;Volta;Turing"
-RUN python -m pip install --user 'git+https://github.com/facebookresearch/detectron2.git'
-RUN python -m pip install --user 'git+https://github.com/KaiyangZhou/deep-person-reid.git'
-RUN pip uninstall -y opencv-python
 COPY . .
 
-WORKDIR /awl/cam_engine/modules/keypoints
-
-RUN python setup.py build_ext --inplace
 RUN conda clean --all -y
 WORKDIR ${AWL_DIR}
