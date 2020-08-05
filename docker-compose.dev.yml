@@ -1,9 +1,8 @@
 version: '2.3'
 services:
    cam_engine:
-      build: CamEngine
-      image: project9-toppan_cam_engine
       container_name: project09-cam-engine
+      image: project9-toppan_cam_engine
       working_dir: /awl/cam_engine
       runtime: nvidia
       volumes:
@@ -11,12 +10,12 @@ services:
          - /tmp/.X11-unix:/tmp/.X11-unix
          - /tmp/.docker.xauth:/tmp/.docker.xauth
          - /etc/localtime:/etc/localtime:ro
-         - ./CamEngine/.env:/awl/cam_engine/.env
+         - ./engine.env:/awl/cam_engine/.env
          - ./outputs/:/awl/cam_engine/outputs
          - ./models:/awl/cam_engine/models
       restart: always
       env_file:
-         - CamEngine/.env
+         - engine.env
       environment:
          - DISPLAY
          - QT_X11_NO_MITSHM=1

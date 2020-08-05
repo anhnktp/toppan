@@ -8,9 +8,9 @@ def get_engine_cams():
     engine_cams = dict()
     list_cam_engine = os.getenv('LIST_CAM_ENGINE').split(',')
     for cam_type in list_cam_engine:
-        if cam_type == 'CAM_360':
+        if 'CAM_360' in cam_type:
             fps_cam_type = '_'.join(['FPS', 'CAM_360'])
-        elif cam_type == 'CAM_SIGNAGE':
+        elif 'CAM_SIGNAGE' in cam_type:
             fps_cam_type = '_'.join(['FPS', 'CAM_SIGNAGE'])
         else:
             fps_cam_type = '_'.join(['FPS', 'CAM_SHELF'])

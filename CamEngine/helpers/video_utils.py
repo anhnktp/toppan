@@ -13,11 +13,11 @@ def get_vid_properties(vid):
 class VideoWriter:
     def __init__(self, width, height, fps, save_path, basename):
         output_fname = os.path.join(save_path, basename)
-        output_fname = os.path.splitext(output_fname)[0] + "_inferenced.mp4"
+        output_fname = os.path.splitext(output_fname)[0] + ".mp4"
 
         self.output_file = cv2.VideoWriter(
             filename=output_fname,
-            fourcc=cv2.VideoWriter_fourcc(*"mp4v"),
+            fourcc=cv2.VideoWriter_fourcc(*"H264"),
             fps=float(fps),
             frameSize=(width, height),
             isColor=True,

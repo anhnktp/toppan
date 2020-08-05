@@ -97,6 +97,6 @@ class EventDetector(object):
             start_time = items[2]
             end_time = items[3]
             duration_group = items[7]
-            csv_writer.write((1, local_id, 1203, 'GROUP {} PEOPLE'.format(num_ppl + 1),
+            csv_writer.write((1, local_id, 1203, 'GROUP {} PEOPLE'.format(num_ppl),
                                 convert_timestamp_to_human_time(start_time), convert_timestamp_to_human_time(end_time), duration_group,
                                 items[9], items[10], items[11], items[12]))

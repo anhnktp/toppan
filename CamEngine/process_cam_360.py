@@ -2,9 +2,8 @@ import time
 import cv2
 import ast
 from shapely.geometry.polygon import Polygon
-# from modules.Detection.Detector_ssd import PersonDetector
-from modules.Detection.Detector_blitznet import PersonDetector
-# from modules.Detection.Detector_yolov3 import PersonDetector
+# from modules.Detection.Detector_blitznet import PersonDetector
+from modules.Detection.Detector_yolov5 import PersonBasketDetector
 from modules.Tracking import Tracker
 from modules.EventDetection import EventDetector
 from modules.Visualization import Visualizer
@@ -52,10 +51,11 @@ def process_cam_360(cam360_queue, num_loaded_model):
     # detector = PersonDetector(os.getenv('CAM_360_GPU'), os.getenv('YOLOv3_CFG_PATH'), ckpt_path=os.getenv('YOLOv3_MODEL_PATH'),
     #                           cls_names=os.getenv('CLS_PATH'), augment=False)
     # Or use Blitznet detection
-    detector = PersonDetector(os.getenv('CAM_360_GPU'), os.getenv('CLS_BLITZNET_PATH'), os.getenv('BLITZNET_MODEL_PATH'))
+    # detector = PersonDetector(os.getenv('CAM_360_GPU'), os.getenv('CLS_BLITZNET_PATH'), os.getenv('BLITZNET_MODEL_PATH'))
 
-    # Use SSD detection
-    # detector = PersonDetector()
+    # Or use Yolov5 detection
+    detector = PersonBasketDetector(os.getenv('CAM_360_GPU'), os.getenv('YOLOv5_CFG_PATH'),
+                                  ckpt_path=os.getenv('YOLOv5_MODEL_PATH'), augment=False)
 
     detector.setROI(roi_x1y1, roi_x2y2)
 
@@ -162,8 +162,8 @@ def process_cam_360(cam360_queue, num_loaded_model):
         # Visualization: plot bounding boxes & trajectories
         # draw_polygon(img_ori, ast.literal_eval(os.getenv('A_AREA')))
         # draw_polygon(img_ori, ast.literal_eval(os.getenv('B_AREA')))
-        # draw_polygon(img_ori, ast.literal_eval(os.getenv('IN_DOOR_AREA')))
-        # draw_polygon(img_ori, ast.literal_eval(os.getenv('OUT_DOOR_AREA')))
+        # draw_polygon(img_ori, ast.literal_eval(os.getenv('SIGNAGE1_AREA')))
+        # draw_polygon(img_ori, ast.literal_eval(os.getenv('SIGNAGE2_AREA')))
         visualizer.draw_fish_eye(img_ori, basket_dets, trackers, event_detector)
 
         # Display the resulting frame

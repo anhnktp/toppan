@@ -14,9 +14,13 @@ def concat_local_id_time(local_id, timestamp):
 def convert_to_jp_time(utc_timestamp):
     return datetime.datetime.fromtimestamp(int(utc_timestamp), datetime.timezone(datetime.timedelta(hours=9))).strftime("%Y/%m/%d %H:%M:%S")
 
-def get_timestamp_from_filename(filename):
-    YYYY, mm, dd, HH, MM, SS = filename[0:-4].split('_')[3:]
+def get_timestamp_from_filename(filename, cam_type='CAM_360'):
+    if cam_type == 'CAM_360':
+        YYYY, mm, dd, HH, MM, SS = filename[0:-4].split('_')[3:]
+    else:
+        YYYY, mm, dd, HH, MM, SS = filename[0:-4].split('_')[4:]
     human_time = '{}:{}:{} {}:{}:{}'.format(YYYY, mm, dd, HH, MM, SS)
+    print('Got start time from video: {}'.format(human_time))
     return time.mktime(time.strptime(human_time, '%Y:%m:%d %H:%M:%S'))
 
 def convert_timestamp_to_human_time(unix_timestamp):

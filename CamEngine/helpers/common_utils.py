@@ -226,6 +226,11 @@ def update_camera_id(filename):
 
     return int(os.environ['SIGNAGE_ID'])
 
+def set_camera_id(index):
+    """ Update the camera id based on the filename """
+    os.environ['SIGNAGE_ID'] = str(index)
+    return int(os.environ['SIGNAGE_ID'])
+
 
 def post_processing_signage_csv(input_csv, output_csv, signage_enter_area, time_diff_threshold=5.0,
                                 accompany_iou_threshold=5.0):
@@ -378,13 +383,12 @@ def combine_signages_to_fisheye(fisheye_df, signage1_df, signage2_df, iou_thresh
         IoU_mat = np.zeros((len(fisheye_sig1_tracks), len(signage1_tracks)), dtype=np.float32)
         for r, trk1 in enumerate(fisheye_sig1_tracks):
             for c, trk2 in enumerate(signage1_tracks):
-                IoU_mat[r, c], _ = compute_time_iou(trk1[1], trk1[2], trk2[1], trk2[2])
+                IoU_mat[r, c],_ = compute_time_iou(trk1[1], trk1[2], trk2[1], trk2[2])
         matched_row, matched_col = linear_sum_assignment(-IoU_mat)
         for r, c in zip(matched_row, matched_col):
             if IoU_mat[r, c] >= iou_threshold:
                 cur_sig_df = signage1_df.loc[(signage1_df['shopper ID'] == signage1_tracks[c][0])]
-                print('>>> [SIGNAGE 1] Fisheye id {} matches with signage id {} with time IoU of {}'.format(
-                    fisheye_sig1_tracks[r][0], signage1_tracks[c][0], IoU_mat[r, c]))
+                print('>>> [SIGNAGE 1] Fisheye id {} matches with signage id {} with time IoU of {}'.format(fisheye_sig1_tracks[r][0], signage1_tracks[c][0], IoU_mat[r, c]))
                 for _, row in cur_sig_df.iterrows():
                     process_ID = None
                     info = None
@@ -410,17 +414,16 @@ def combine_signages_to_fisheye(fisheye_df, signage1_df, signage2_df, iou_thresh
                     attention_list.append(trk2[0])
             if len(attention_list) > 0:
                 process_ID = 1557
-                attention_df = signage1_df.loc[
-                    (signage1_df['shopper ID'] == trk[0]) & signage1_df['info'].str.contains('attention')]
+                attention_df = signage1_df.loc[(signage1_df['shopper ID'] == trk[0]) & signage1_df['info'].str.contains('attention')]
 
                 for _, row in attention_df.iterrows():
                     info = 'HAS ATTENTION TO SIGNAGE_1 IN {}s'.format(row['Duration'])
 
                     fisheye_df = fisheye_df.append(
-                        {'camera ID': 1, 'shopper ID': str(attention_list), 'process ID': process_ID,
-                         'info': info,
-                         'timestamp (unix timestamp)': time.mktime(row['Start_time'].timetuple()),
-                         'timestamp (UTC - JST)': row['Start_time']}, ignore_index=True)
+                                {'camera ID': 1, 'shopper ID': str(attention_list), 'process ID': process_ID,
+                                'info': info,
+                                'timestamp (unix timestamp)': time.mktime(row['Start_time'].timetuple()),
+                                'timestamp (UTC - JST)': row['Start_time']}, ignore_index=True)
 
     # Compute ious and do id assignment between cam 360 tracks and cam signage 1 tracks
     if len(fisheye_sig2_tracks) > 0 and len(signage2_tracks) > 0:
@@ -434,8 +437,7 @@ def combine_signages_to_fisheye(fisheye_df, signage1_df, signage2_df, iou_thresh
         for r, c in zip(matched_row, matched_col):
             if IoU_mat[r, c] >= iou_threshold:
                 cur_sig_df = signage2_df.loc[(signage2_df['shopper ID'] == signage2_tracks[c][0])]
-                print('>>> [SIGNAGE 2] Fisheye id {} matches with signage id {} with time IoU of {}'.format(
-                    fisheye_sig2_tracks[r][0], signage2_tracks[c][0], IoU_mat[r, c]))
+                print('>>> [SIGNAGE 2] Fisheye id {} matches with signage id {} with time IoU of {}'.format(fisheye_sig2_tracks[r][0], signage2_tracks[c][0], IoU_mat[r, c]))
                 for _, row in cur_sig_df.iterrows():
                     process_ID = None
                     info = None
@@ -445,7 +447,7 @@ def combine_signages_to_fisheye(fisheye_df, signage1_df, signage2_df, iou_thresh
                         process_ID = 1557
                         info = 'HAS ATTENTION TO SIGNAGE_2 IN {}s'.format(row['Duration'])
                     fisheye_df = fisheye_df.append(
-                        {'camera ID': 2, 'shopper ID': fisheye_sig2_tracks[r][0], 'process ID': process_ID,
+                        {'camera ID': 1, 'shopper ID': fisheye_sig2_tracks[r][0], 'process ID': process_ID,
                          'info': info,
                          'timestamp (unix timestamp)': time.mktime(row['Start_time'].timetuple()),
                          'timestamp (UTC - JST)': row['Start_time']}, ignore_index=True)
@@ -460,16 +462,16 @@ def combine_signages_to_fisheye(fisheye_df, signage1_df, signage2_df, iou_thresh
                     attention_list.append(trk2[0])
             if len(attention_list) > 0:
                 process_ID = 1557
-                attention_df = signage2_df.loc[
-                    (signage2_df['shopper ID'] == trk[0]) & signage2_df['info'].str.contains('attention')]
+                attention_df = signage2_df.loc[(signage2_df['shopper ID'] == trk[0]) & signage2_df['info'].str.contains('attention')]
 
                 for _, row in attention_df.iterrows():
                     info = 'HAS ATTENTION TO SIGNAGE_2 IN {}s'.format(row['Duration'])
 
                     fisheye_df = fisheye_df.append(
-                        {'camera ID': 2, 'shopper ID': str(attention_list), 'process ID': process_ID,
-                         'info': info,
-                         'timestamp (unix timestamp)': time.mktime(row['Start_time'].timetuple()),
-                         'timestamp (UTC - JST)': row['Start_time']}, ignore_index=True)
+                                {'camera ID': 1, 'shopper ID': str(attention_list), 'process ID': process_ID,
+                                'info': info,
+                                'timestamp (unix timestamp)': time.mktime(row['Start_time'].timetuple()),
+                                'timestamp (UTC - JST)': row['Start_time']}, ignore_index=True)
+
 
     return fisheye_df.loc[~fisheye_df['info'].str.contains('SIGNAGE ')]

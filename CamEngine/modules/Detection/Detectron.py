@@ -36,4 +36,3 @@ class Detectron(DetectorBase):
             dets.append([x0, y0 , x1, y1, score])
         dets = np.array(dets)
         return dets
-

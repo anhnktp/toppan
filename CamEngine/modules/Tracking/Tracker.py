@@ -291,10 +291,9 @@ class SignageTracker(TrackerBase):
                                      min(max(trk.get_last_state(-1)[0][2], 0),
                                          ast.literal_eval(os.getenv('IMG_SIZE_CAM_SIGNAGE'))[0])) / 2)
                     y2_center = int((min(max(trk.get_last_state(-1)[0][1], 0),
-                                         ast.literal_eval(os.getenv('IMG_SIZE_CAM_SIGNAGE'))[0]) +
+                                         ast.literal_eval(os.getenv('IMG_SIZE_CAM_SIGNAGE'))[1]) +
                                      min(max(trk.get_last_state(-1)[0][3], 0),
-                                         ast.literal_eval(os.getenv('IMG_SIZE_CAM_SIGNAGE'))[0])) / 2)
-
+                                         ast.literal_eval(os.getenv('IMG_SIZE_CAM_SIGNAGE'))[1])) / 2)
                     localIDs_end.append([trk.id, len(ppl_accompany), trk.basket_time, self._timestamp, 'has_attention',
                                          trk.start_hp_list, trk.duration_hp_list, duration_group, trk.end_hp_list,
                                          int((trk.sig_start_bbox[0] + trk.sig_start_bbox[2]) / 2),
@@ -308,9 +307,9 @@ class SignageTracker(TrackerBase):
                                      min(max(trk.get_last_state(-1)[0][2], 0),
                                          ast.literal_eval(os.getenv('IMG_SIZE_CAM_SIGNAGE'))[0])) / 2)
                     y2_center = int((min(max(trk.get_last_state(-1)[0][1], 0),
-                                         ast.literal_eval(os.getenv('IMG_SIZE_CAM_SIGNAGE'))[0]) +
+                                         ast.literal_eval(os.getenv('IMG_SIZE_CAM_SIGNAGE'))[1]) +
                                      min(max(trk.get_last_state(-1)[0][3], 0),
-                                         ast.literal_eval(os.getenv('IMG_SIZE_CAM_SIGNAGE'))[0])) / 2)
+                                         ast.literal_eval(os.getenv('IMG_SIZE_CAM_SIGNAGE'))[1])) / 2)
                     localIDs_end.append([trk.id, len(ppl_accompany), trk.basket_time, self._timestamp, 'no', 'None',
                                          duration_attention, duration_group, 'None',
                                          int((trk.sig_start_bbox[0] + trk.sig_start_bbox[2]) / 2),

@@ -2,6 +2,7 @@ import cv2
 from shapely.geometry.polygon import Polygon
 from shapely.geometry import Point
 import numpy as np
+import os
 
 
 def inPolygon(polygon, x):
@@ -12,20 +13,26 @@ def inPolygon(polygon, x):
     point = Point(x)
     return polygon.contains(point)
 
+
 def count_in_shelf_area(hands, item_boxes):
     shelves = []
-
+    vthresh = float(os.getenv('VELOCITY_THRESHOLD'))
     for hand in hands:
-        # shelf_1: POLYGON ((612 251, 174 402, 102 86, 513 4, 612 251))
         for shelf_name, item_box in item_boxes.items():
             hand_center = hand[-1]
+            hand_velo = hand[-2]
+            hand_vy = hand[-3]
+            curent_time = hand[-5]
+            hand_id = hand[4]
             have_item_event = False
-            if (not have_item_event) and (hand_center is not None) and inPolygon(item_box, hand_center):
+
+            if (not have_item_event) and (hand_center is not None) and inPolygon(item_box,
+                                                                                 hand_center) and hand_velo < vthresh and hand_vy < 1:
                 shelf_id = int(shelf_name.split('_')[-1])
-                shelves.append((shelf_id, hand_center))
+                shelves.append((shelf_id, hand_id, hand_center, curent_time))
                 have_item_event = True
 
-            if have_item_event: # process the next hand
+            if have_item_event:  # process the next hand
                 continue
 
     return shelves
@@ -68,27 +75,27 @@ def box_to_polygon(box):
 
     return polygon
 
+
 def get_shelf_id(ious_dict, overlap_thresh=0.3):
     """
     Return the shelf id (loc) if it has the max IoU with a detected handbox
     """
     shelf_key = max(ious_dict.keys(), key=(lambda key: ious_dict[key]))
-    
+
     if ious_dict[shelf_key] < overlap_thresh:
         return None, None
 
     shelf_id = shelf_key.split('_')[-1]
     shelf_id = int(shelf_id)
-    
-    return shelf_id, ious_dict[shelf_key]
 
+    return shelf_id, ious_dict[shelf_key]
 
 
 def get_shelves_id(dets_per_frame, shelves_info, view):
     shelves_id = []
     boxes_center = []
     ious = []
-    
+
     if len(dets_per_frame) > 0:
         for det in dets_per_frame:  # det = [x0, y0 , x1, y1, score]
             box = det[:4]
@@ -103,7 +110,7 @@ def get_shelves_id(dets_per_frame, shelves_info, view):
                 boxes_center.append(box_center)
                 ious.append(round(iou, 4))
 
-    if len(shelves_id):   # if at least one hand is detected
+    if len(shelves_id):  # if at least one hand is detected
         shelves_info_out = {"cam_id": view,
                             "shoppers_id": ["<BLANK>"] * len(shelves_id),
                             "process_id": 1201,
@@ -111,7 +118,7 @@ def get_shelves_id(dets_per_frame, shelves_info, view):
                             "unix_timestamp": -1,
                             "jst_timestamp": -1,
                             "boxes_center": boxes_center,
-                            "ious": ious,}
+                            "ious": ious, }
     else:
         shelves_info_out = dict()
 
